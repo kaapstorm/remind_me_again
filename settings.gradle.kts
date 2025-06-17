@@ -7,10 +7,12 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
+        // google()
         mavenCentral()
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -21,4 +23,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "Remind Me Again"
 include(":app")
- 
