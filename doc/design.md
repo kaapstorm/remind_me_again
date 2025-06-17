@@ -17,24 +17,80 @@ App Navigation & Screen Flow
    - Tap a reminder to edit.
    - Tap notification to open "Show Reminder" screen.
 
+   ```plaintext
+   +--------------------------------------+
+   | Remind Me Again                      |
+   | +----------------------------------+ |
+   | | + (FAB)                         | |  <-- FloatingActionButton (top left)
+   | +----------------------------------+ |
+   |                                      |
+   | [ Reminder 1           08:00 AM  > ] |
+   | [ Reminder 2           09:30 PM  > ] |  <-- RecyclerView list items
+   | [ Reminder 3           07:15 AM  > ] |
+   |                                      |
+   +--------------------------------------+
+   ```
+
+   ![Reminder List Mockup](img/reminder_list.png)
+
 2. **Add/Edit Reminder Screen**
    - Fields: Name (EditText), Time (TimePicker), Schedule (custom UI).
    - Save/Cancel buttons.
+
+   ```plaintext
+   +--------------------------------------+
+   | Add Reminder                         |
+   |--------------------------------------|
+   | Name: [______________]               |  <-- EditText
+   | Time: [ 08:00 AM   ⏰ ]               |  <-- TimePicker
+   | Schedule:                            |
+   |   ( ) Daily                          |
+   |   ( ) Weekly [Mon][Wed][Fri]         |  <-- Chips/Buttons
+   |   ( ) Fortnightly [Thu]              |
+   |   ( ) Monthly [1st][Thu]             |
+   |                                      |
+   | [Cancel]         [Save]              |  <-- Buttons
+   +--------------------------------------+
+   ```
+
+   ![Add Reminder Mockup](img/add_reminder.png)
 
 3. **Show Reminder Screen**
    - Shows reminder details.
    - If due: "Stop" and "Postpone" actions.
 
+   ```plaintext
+   +--------------------------------------+
+   | Reminder Details                     |
+   |--------------------------------------|
+   | Name: Morning Meds                   |
+   | Last stopped: 07:45 AM               |
+   |                                      |
+   | [ Reminder is due! ]                 |
+   | [ Stop ]   [ Postpone > ]            |  <-- Buttons
+   |                                      |
+   | Postpone:                            |
+   |   ( ) 5 min   ( ) 15 min             |  <-- RadioGroup
+   |   ( ) 1 hr    ( ) 4 hr   ( ) 12 hr   |
+   +--------------------------------------+
+   ```
+
+   ![Show Reminder Mockup](img/show_reminder.png)
+
 4. **Notification**
    - Appears when a reminder is due.
    - Shows name, "Stop", and "Later" actions.
 
-![Reminder List Mockup](img/reminder_list.png)
-![Add Reminder Mockup](img/add_reminder.png)
-![Show Reminder Mockup](img/show_reminder.png)
-![Notification Mockup](img/notification.png)
+   ```plaintext
+   +--------------------------------------+
+   | 🔔 Reminder: Morning Meds            |
+   |--------------------------------------|
+   | [ Stop ]   [ Later ]                 |  <-- Notification actions
+   +--------------------------------------+
+   ```
 
-> **Note:** Place mockup images in `doc/img/`.
+   ![Notification Mockup](img/notification.png)
+
 
 UI Elements & Layouts
 ---------------------
