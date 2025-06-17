@@ -8,6 +8,77 @@ Remind Me Again is an Android app for recurring reminders. It allows
 users to create, edit, and manage reminders with flexible schedules and
 receive timely notifications.
 
+Guiding Principles
+------------------
+
+Remind Me Again is an offline, local-only app.
+
+The UI is clean and minimalist.
+
+Technical Design Decisions
+-------------------------
+
+1. **Data Layer & Persistence**
+   - Use Kotlin Coroutines for asynchronous database operations
+   - RoomDatabase classes are versioned with RoomDatabase.Migration objects
+   - All migrations must be covered by migration tests
+   - Schema changes are documented using Room's exportSchema = true
+   - Repository pattern used to abstract data source
+
+2. **Architecture Pattern**
+   - MVI architecture using StateFlow for unidirectional state management
+
+3. **Dependency Injection**
+   - Koin for Kotlin-friendly dependency injection
+
+4. **UI Implementation**
+   - Jetpack Compose for modern design and UI quality
+   - LazyColumn for lists
+   - TimePicker: Material3 TimePicker
+   - Schedule selection: Material3 Chips without custom animations
+
+5. **Background Work & Scheduling**
+   - WorkManager's periodic work with 5-minute minimum interval
+   - Accommodates battery optimization
+   - No foreground service required
+
+6. **Testing Strategy**
+   - JUnit4 for unit tests
+   - Espresso for UI testing
+   - Integration tests for database and WorkManager
+
+7. **Error Handling**
+   - No centralized error handling system
+   - No network error handling required
+   - No retry mechanisms needed
+
+8. **Localization**
+   - Initial implementation: English only
+   - Time: 24-hour format
+   - Dates: ISO 8601 format
+   - Days: Three-letter abbreviations (e.g., Tue 2025-06-17 19:30)
+   - No RTL support in initial implementation
+
+9. **Accessibility**
+   - Basic TalkBack support only
+   - No custom accessibility actions required
+
+10. **Edge Cases**
+    - Handles device reboots
+    - Times are local (e.g., 13:00 remains 13:00 across time zones)
+    - Post-update reminder notifications
+    - DST handling:
+      - Double-occurring times: Notify at first occurrence
+      - Skipped times: Notify at next hour
+
+11. **Performance**
+    - No pagination required for reminder lists
+
+12. **Analytics & Monitoring**
+    - No crash reporting
+    - No usage analytics
+    - No completion tracking
+
 App Navigation & Screen Flow
 ----------------------------
 
@@ -21,12 +92,12 @@ App Navigation & Screen Flow
    +--------------------------------------+
    | Remind Me Again                      |
    | +----------------------------------+ |
-   | | + (FAB)                         | |  <-- FloatingActionButton (top left)
+   | | + (FAB)                          | |  <-- FloatingActionButton (top left)
    | +----------------------------------+ |
    |                                      |
-   | [ Reminder 1           08:00 AM  > ] |
-   | [ Reminder 2           09:30 PM  > ] |  <-- RecyclerView list items
-   | [ Reminder 3           07:15 AM  > ] |
+   | [ Reminder 1              08:00  > ] |
+   | [ Reminder 2              21:30  > ] |  <-- LazyColumn list items
+   | [ Reminder 3              07:15  > ] |
    |                                      |
    +--------------------------------------+
    ```
@@ -83,7 +154,7 @@ App Navigation & Screen Flow
 
    ```plaintext
    +--------------------------------------+
-   | 🔔 Reminder: Morning Meds            |
+   | 🔔 Reminder: Morning Meds             |
    |--------------------------------------|
    | [ Stop ]   [ Later ]                 |  <-- Notification actions
    +--------------------------------------+
@@ -95,7 +166,7 @@ App Navigation & Screen Flow
 UI Elements & Layouts
 ---------------------
 
-- **Reminder List:** RecyclerView, FloatingActionButton.
+- **Reminder List:** LazyColumn, FloatingActionButton.
 - **Add/Edit Reminder:** EditText, TimePicker, Spinner/Chips for schedule, Buttons.
 - **Show Reminder:** TextView, Buttons, RadioGroup.
 - **Notification:** Android Notification with actions.
@@ -142,21 +213,20 @@ Accessibility & Localization
 Error Handling & Testing
 ------------------------
 
-- Show error messages via Snackbar.
-- Unit and UI tests for reminder logic and notifications.
+- Show error messages via Snackbar
+- Unit tests using JUnit5
+- UI tests using Espresso
+- Integration tests for database and WorkManager
+- Database migrations must be covered by tests
+- Domain logic must be covered by tests
+- UI functionality must be covered by tests
 
 Edge Cases
 ----------
 
-- Handle device reboot (reschedule reminders).
-- Handle time zone changes.
-
----
-
-**To help an AI tool:**
-- Add mockup images to `doc/img/`.
-- Use clear, unambiguous field names and types.
-- Specify navigation and user flows.
-- List all screens and UI elements.
-- Describe notification logic and background work.
-- Note platform-specific requirements (permissions, storage).
+- Handle device reboot (reschedule reminders)
+- Handle time zone changes:
+  - Times remain local (e.g., 13:00 stays 13:00 across time zones)
+  - DST double-occurring times: Notify at first occurrence
+  - DST skipped times: Notify at next hour
+- Handle app updates (notify immediately after update)
