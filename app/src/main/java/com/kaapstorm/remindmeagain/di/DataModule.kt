@@ -17,4 +17,7 @@ val dataModule = module {
     
     // Repository
     single { ReminderRepository(get(), get()) }
-} 
+}
+
+// Include domain module
+val appModules = listOf(dataModule, domainModule)
