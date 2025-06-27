@@ -222,13 +222,18 @@ Accessibility & Localization
 Error Handling & Testing
 ------------------------
 
-- Show error messages via Snackbar
+- Error messages should identify the problem, and, if possible, indicate to
+  the user how to resolve the problem.
+- Show field validation errors below the field.
+- Show general error messages using Snackbar.
 - Unit tests using JUnit5
 - UI tests using Espresso
 - Integration tests for database and WorkManager
 - Database migrations must be covered by tests
 - Domain logic must be covered by tests
 - UI functionality must be covered by tests
+- Write tests as code is added or changes are made so that the changes can be
+  verified as work progresses.
 
 
 Edge Cases
@@ -327,7 +332,8 @@ do not occur every month, e.g. the 31st day of the month.
 
 ### Theme & Styling
 
-Follow the Material 3 design system. Use the default Material 3 theme.
+Follow the Material 3 design system. Use the default Material Design 3 theme.
+Use dynamic Material You color theming.
 
 ### Navigation Structure
 
