@@ -69,4 +69,10 @@
     <!-- Date Picker -->
     <string name="select_date">Select date</string>
     <string name="first_occurrence">First occurrence</string>
+    
+    <!-- Notifications -->
+    <string name="notification_title">Reminder</string>
+    <string name="notification_channel_name">Reminders</string>
+    <string name="notification_channel_description">Notifications for scheduled reminders</string>
+    <string name="later">Later</string>
 </resources>

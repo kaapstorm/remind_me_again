@@ -7,6 +7,7 @@ import com.kaapstorm.remindmeagain.data.model.CompleteAction
 import com.kaapstorm.remindmeagain.data.model.PostponeAction
 import com.kaapstorm.remindmeagain.data.model.Reminder
 import com.kaapstorm.remindmeagain.data.model.ReminderAction
+import com.kaapstorm.remindmeagain.domain.service.ReminderSchedulingService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +16,8 @@ import java.time.Instant
 
 class ShowReminderViewModel(
     private val reminderId: Long,
-    private val reminderRepository: ReminderRepository
+    private val reminderRepository: ReminderRepository,
+    private val schedulingService: ReminderSchedulingService
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ShowReminderState())
@@ -44,11 +46,18 @@ class ShowReminderViewModel(
                         // For now, just get the most recent complete action
                         reminderRepository.getCompleteActionsForReminder(reminderId).collect { actions ->
                             val lastAction = actions.maxByOrNull { it.timestamp }
+                            
+                            // Calculate if reminder is due using the scheduling service
+                            val isDue = schedulingService.isReminderActive(
+                                reminder = reminder,
+                                dateTime = Instant.now().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
+                            )
+                            
                             _state.value = _state.value.copy(
                                 isLoading = false,
                                 reminder = reminder,
                                 lastAction = lastAction,
-                                isDue = true // TODO: Implement proper due calculation
+                                isDue = isDue
                             )
                         }
                     } else {

@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kaapstorm.remindmeagain.R
 import com.kaapstorm.remindmeagain.data.model.Reminder
+import com.kaapstorm.remindmeagain.ui.components.NotificationPermissionHandler
 import com.kaapstorm.remindmeagain.ui.components.ReminderScheduleText
 import org.koin.androidx.compose.koinViewModel
 import java.time.format.DateTimeFormatter
@@ -59,6 +60,9 @@ fun ReminderListScreen(
             snackbarHostState.showSnackbar(error)
         }
     }
+
+    // Request notification permission when the screen loads
+    NotificationPermissionHandler()
 
     Scaffold(
         topBar = {

@@ -225,6 +225,12 @@ private fun TimePickerField(
         is24Hour = true
     )
 
+    // Update timePickerState when time parameter changes
+    LaunchedEffect(time) {
+        timePickerState.hour = time.hour
+        timePickerState.minute = time.minute
+    }
+
     LaunchedEffect(timePickerState.hour, timePickerState.minute) {
         onTimeChange(LocalTime.of(timePickerState.hour, timePickerState.minute))
     }
