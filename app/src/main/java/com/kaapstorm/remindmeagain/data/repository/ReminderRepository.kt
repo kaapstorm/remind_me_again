@@ -26,12 +26,12 @@ class ReminderRepository(
     fun getRemindersByTime(time: LocalTime): Flow<List<Reminder>> = reminderDao.getByTime(time)
 
     // Action operations
-    suspend fun insertStopAction(action: StopAction) = reminderActionDao.insertStopAction(action)
+    suspend fun insertCompleteAction(action: CompleteAction) = reminderActionDao.insertCompleteAction(action)
     
     suspend fun insertPostponeAction(action: PostponeAction) = reminderActionDao.insertPostponeAction(action)
     
-    fun getStopActionsForReminder(reminderId: Long): Flow<List<StopAction>> =
-        reminderActionDao.getStopActionsForReminder(reminderId)
+    fun getCompleteActionsForReminder(reminderId: Long): Flow<List<CompleteAction>> =
+        reminderActionDao.getCompleteActionsForReminder(reminderId)
 
     fun getPostponeActionsForReminder(reminderId: Long): Flow<List<PostponeAction>> =
         reminderActionDao.getPostponeActionsForReminder(reminderId)

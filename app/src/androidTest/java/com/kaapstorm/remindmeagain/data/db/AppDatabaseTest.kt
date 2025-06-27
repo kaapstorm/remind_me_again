@@ -77,7 +77,7 @@ class AppDatabaseTest {
     }
 
     @Test
-    fun testStopActionInsertAndRetrieve() = runBlocking {
+    fun testCompleteActionInsertAndRetrieve() = runBlocking {
         // Create test data
         val reminder = Reminder(
             name = "Test Reminder",
@@ -86,21 +86,21 @@ class AppDatabaseTest {
         )
         val reminderId = reminderDao.insert(reminder)
 
-        val stopAction = StopAction(
+        val completeAction = CompleteAction(
             reminderId = reminderId,
             timestamp = Instant.now()
         )
 
         // Insert action
-        val id = reminderActionDao.insertStopAction(stopAction)
+        val id = reminderActionDao.insertCompleteAction(completeAction)
         assertTrue(id > 0)
 
         // Retrieve and verify
-        val actions = reminderActionDao.getStopActionsForReminder(reminderId).first()
+        val actions = reminderActionDao.getCompleteActionsForReminder(reminderId).first()
         assertTrue(actions.isNotEmpty())
-        val retrieved = actions.first() as StopAction
-        assertEquals(stopAction.reminderId, retrieved.reminderId)
-        assertEquals(stopAction.timestamp.epochSecond, retrieved.timestamp.epochSecond)
+        val retrieved = actions.first() as CompleteAction
+        assertEquals(completeAction.reminderId, retrieved.reminderId)
+        assertEquals(completeAction.timestamp.epochSecond, retrieved.timestamp.epochSecond)
     }
 
     @Test
@@ -150,12 +150,12 @@ class AppDatabaseTest {
         reminderDao.insert(activeReminder)
         val inactiveId = reminderDao.insert(inactiveReminder)
 
-        // Create a stop action for the inactive reminder
-        val stopAction = StopAction(
+        // Create a complete action for the inactive reminder
+        val completeAction = CompleteAction(
             reminderId = inactiveId,
             timestamp = Instant.now()
         )
-        reminderActionDao.insertStopAction(stopAction)
+        reminderActionDao.insertCompleteAction(completeAction)
 
         // Verify active reminders
         val activeReminders = reminderDao.getActive().first()

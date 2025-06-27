@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         Reminder::class,
-        StopAction::class,
+        CompleteAction::class,
         PostponeAction::class
     ],
     version = 1,

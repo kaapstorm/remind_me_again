@@ -28,8 +28,8 @@ abstract class ReminderAction {
     abstract val timestamp: Instant
 }
 
-@Entity(tableName = "stop_actions")
-data class StopAction(
+@Entity(tableName = "complete_actions")
+data class CompleteAction(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
     override val reminderId: Long,
