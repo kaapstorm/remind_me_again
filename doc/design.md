@@ -8,12 +8,14 @@ Remind Me Again is an Android app for recurring reminders. It allows
 users to create, edit, and manage reminders with flexible schedules and
 receive timely notifications.
 
+
 Guiding Principles
 ------------------
 
 Remind Me Again is an offline, local-only app.
 
 The UI is clean and minimalist.
+
 
 Technical Design Decisions
 -------------------------
@@ -79,6 +81,7 @@ Technical Design Decisions
     - No usage analytics
     - No completion tracking
 
+
 App Navigation & Screen Flow
 ----------------------------
 
@@ -113,7 +116,7 @@ App Navigation & Screen Flow
    | Add Reminder                         |
    |--------------------------------------|
    | Name: [______________]               |  <-- EditText
-   | Time: [ 08:00 AM   ⏰ ]               |  <-- TimePicker
+   | Time: [ 08:00 AM   ⏰ ]              |  <-- TimePicker
    | Schedule:                            |
    |   ( ) Daily                          |
    |   ( ) Weekly [Mon][Wed][Fri]         |  <-- Chips/Buttons
@@ -128,7 +131,7 @@ App Navigation & Screen Flow
 
 3. **Show Reminder Screen**
    - Shows reminder details.
-   - If due: "Stop" and "Postpone" actions.
+   - If due: "Done" and "Postpone" actions.
 
    ```plaintext
    +--------------------------------------+
@@ -138,7 +141,7 @@ App Navigation & Screen Flow
    | Last stopped: 07:45 AM               |
    |                                      |
    | [ Reminder is due! ]                 |
-   | [ Stop ]   [ Postpone > ]            |  <-- Buttons
+   | [ Done ]   [ Postpone > ]            |  <-- Buttons
    |                                      |
    | Postpone:                            |
    |   ( ) 5 min   ( ) 15 min             |  <-- RadioGroup
@@ -150,13 +153,13 @@ App Navigation & Screen Flow
 
 4. **Notification**
    - Appears when a reminder is due.
-   - Shows name, "Stop", and "Later" actions.
+   - Shows name, "Done", and "Later" actions.
 
    ```plaintext
    +--------------------------------------+
-   | 🔔 Reminder: Morning Meds             |
+   | 🔔 Reminder: Morning Meds            |
    |--------------------------------------|
-   | [ Stop ]   [ Later ]                 |  <-- Notification actions
+   | [ Done ]   [ Later ]                 |  <-- Notification actions
    +--------------------------------------+
    ```
 
@@ -171,6 +174,7 @@ UI Elements & Layouts
 - **Show Reminder:** TextView, Buttons, RadioGroup.
 - **Notification:** Android Notification with actions.
 
+
 Data Model
 ----------
 
@@ -178,10 +182,11 @@ Data Model
 |-------------------|---------------------------------------------|
 | Reminder          | id (int), name (string), time (time), schedule (ReminderSchedule) |
 | ReminderAction    | id (int), reminderId (int, FK), lastActionId (int, nullable, FK) |
-| StopAction        | id (int, FK), timestamp (datetime)          |
+| CompleteAction    | id (int, FK), timestamp (datetime)          |
 | PostponeAction    | id (int, FK), timestamp (datetime), intervalSeconds (int) |
 
 - Use Room for local storage.
+
 
 ReminderSchedule
 ----------------
@@ -191,12 +196,14 @@ ReminderSchedule
 - Fortnightly (every two weeks, single day)
 - Monthly (by day of month or nth weekday)
 
+
 Notification Behavior
 ---------------------
 
 - Uses AlarmManager/WorkManager for scheduling.
-- Notification includes reminder name, "Stop", and "Later" actions.
+- Notification includes reminder name, "Done", and "Later" actions.
 - "Later" doubles the postpone interval each time (1, 2, 4, ... minutes).
+
 
 Permissions & Background Work
 ----------------------------
@@ -204,11 +211,13 @@ Permissions & Background Work
 - Request `POST_NOTIFICATIONS` (Android 13+).
 - Use WorkManager for reliable background scheduling.
 
+
 Accessibility & Localization
 ----------------------------
 
 - Support TalkBack and large text.
 - Strings in `strings.xml` for localization.
+
 
 Error Handling & Testing
 ------------------------
@@ -221,6 +230,7 @@ Error Handling & Testing
 - Domain logic must be covered by tests
 - UI functionality must be covered by tests
 
+
 Edge Cases
 ----------
 
@@ -230,3 +240,139 @@ Edge Cases
   - DST double-occurring times: Notify at first occurrence
   - DST skipped times: Notify at next hour
 - Handle app updates (notify immediately after update)
+
+
+UI Details
+----------
+
+### Navigation Pattern
+
+Use **Navigation Compose** with a single activity approach. The 3 main screens
+should be composable destinations.
+
+### State Management
+
+Implement "MVI architecture using StateFlow" such that each screen has its own
+ViewModel with MVI pattern (Intent → State → Effect).
+
+For the reminder list, show all reminders.
+
+### Schedule Selection UI
+
+When adding or editing a Reminder, the Schedule selection (Daily, Weekly,
+Fortnightly or Monthly) should use **radio buttons** so that the user can only
+select one.
+
+Once the user has selected a radio button, the user is shown further options:
+
+- Daily: There are no further options.
+
+- Weekly: The user is shown **chips** for the days of the week. The user is able
+  to select **multiple**.
+
+- Fortnightly: The user is prompted for the first day. Input uses a Jetpack
+  Compose **modal input** date picker, which combines a text field with a modal
+  date picker.
+
+- Monthly: The user is prompted for the first day. Input uses a Jetpack
+  Compose **modal input** date picker, which combines a text field with a modal
+  date picker.
+
+  After the user has chosen a day, they are shown another **radio group** to
+  determine whether the Reminder is for the day of the month, or the day of the
+  week. For example, if the date is Wednesday 15 January, 2025, the radio button
+  labels would be:
+  ```
+  ( ) 15th day
+  ( ) 3rd Wednesday
+  ```
+  "3rd Wednesday" is because Wednesday 15 January, 2025 is the Wednesday in week
+  3 of January 2025.
+
+### Time Format
+
+The time picker should use Jetpack Compose TimeInput. The `is24Hour` parameter
+of `TimeInput`'s `state` parameter should be set to `true`.
+
+The time in the reminder list should be in 24-hour format.
+
+### Postpone Options
+
+The postpone intervals (5 min, 15 min, 1 hr, 4 hr, 12 hr) should be fixed.
+
+The "doubling" behavior (1, 2, 4, ... minutes) should be implemented in the
+backend.
+
+### Empty States
+
+If there are no reminders in the list, show "You have no reminders."
+
+### Edit vs Add
+
+"Add Reminder" and "Edit Reminder" should be the same screen with different
+titles. When editing, the current values should be pre-filled.
+
+### Notification Integration
+
+Notification should have "Done" and "Later" actions, and if the user presses the
+name of the reminder, they should be taken to the Reminder Details / Show
+Reminder screen.
+
+### Validation
+
+Reminder names must not be empty, and must not be longer than 50 characters.
+
+Reminders can be set in the past. Monthly reminders can also be set on days that
+do not occur every month, e.g. the 31st day of the month.
+
+### Theme & Styling
+
+Follow the Material 3 design system. Use the default Material 3 theme.
+
+### Navigation Structure
+
+Navigation should use just forward/back navigation between screens.
+
+The "Show Reminder" screen (accessed from notifications) should be a modal. The
+user should not be taken back to the reminder list.
+
+### Schedule Selection Details
+
+For the **Fortnightly** and **Monthly** date pickers, users should be restricted
+to valid dates (e.g. prevented from selecting February 30th).
+
+For the **Monthly** radio group (15th day vs 3rd Wednesday), this choice should
+be saved as part of the `ReminderSchedule.Monthly` data.
+
+For example, if "15th day" is selected, then `ReminderSchedule.Monthly` will
+have the following values:
+```
+dayOfMonth = 15
+dayOfWeek = null
+weekOfMonth = null
+```
+Alternatively, if "3rd Wednesday" is selected, then `ReminderSchedule.Monthly`
+will have the following values:
+```
+dayOfMonth = null
+dayOfWeek = Wednesday
+weekOfMonth = 3
+```
+
+### Reminder List Display
+
+The reminder list should show the schedule type (e.g., "Daily", "Mon, Wed", "3rd
+Tuesday") alongside the time.
+
+### Validation Feedback
+
+When validation fails (empty name, >50 characters):
+- Show an error message below the field informing the user how to fix the
+  problem. e.g. "Please give the reminder a name", or "The name should not be
+  more than 50 characters"
+- Disable the Save button
+
+### Time Display Format
+
+In the reminder list, show the time and include the schedule info (e.g.
+"21:00 Daily").
