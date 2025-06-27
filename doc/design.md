@@ -88,8 +88,7 @@ App Navigation & Screen Flow
 1. **Reminder List Screen**
    - Shows all reminders.
    - "+" FloatingActionButton to add a new reminder.
-   - Tap a reminder to edit.
-   - Tap notification to open "Show Reminder" screen.
+   - Tap a reminder to open "Show Reminder" screen.
 
    ```plaintext
    +--------------------------------------+
@@ -132,13 +131,17 @@ App Navigation & Screen Flow
 3. **Show Reminder Screen**
    - Shows reminder details.
    - If due: "Done" and "Postpone" actions.
+   - If the reminder will be due on the same day: "Done" only.
+   - If the user taps Delete, they are shown a confirmation dialog. If they
+     confirm then the reminder is deleted. Use a standard Material 3
+     AlertDialog with "Cancel" and "Delete" buttons.
 
    ```plaintext
    +--------------------------------------+
    | Reminder Details                     |
    |--------------------------------------|
    | Name: Morning Meds                   |
-   | Last stopped: 07:45 AM               |
+   | Last done: 07:45 AM                  |
    |                                      |
    | [ Reminder is due! ]                 |
    | [ Done ]   [ Postpone > ]            |  <-- Buttons
@@ -146,6 +149,8 @@ App Navigation & Screen Flow
    | Postpone:                            |
    |   ( ) 5 min   ( ) 15 min             |  <-- RadioGroup
    |   ( ) 1 hr    ( ) 4 hr   ( ) 12 hr   |
+   |                                      |
+   | [ Edit ]   [ Delete ]                |  <-- Buttons
    +--------------------------------------+
    ```
 
@@ -154,6 +159,7 @@ App Navigation & Screen Flow
 4. **Notification**
    - Appears when a reminder is due.
    - Shows name, "Done", and "Later" actions.
+   - Tap name to open "Show Reminder" screen.
 
    ```plaintext
    +--------------------------------------+
