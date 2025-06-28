@@ -42,7 +42,7 @@ class ReminderWorkerTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        
+
         context = mockk(relaxed = true)
         workerParams = mockk(relaxed = true)
         reminderRepository = mockk()
@@ -78,11 +78,11 @@ class ReminderWorkerTest {
         )
 
         coEvery { reminderRepository.getActiveReminders() } returns flowOf(listOf(reminder))
-        every { 
+        every {
             schedulingService.isReminderActive(
                 reminder = reminder,
                 dateTime = any<LocalDateTime>()
-            ) 
+            )
         } returns true
 
         // When
@@ -91,11 +91,11 @@ class ReminderWorkerTest {
         // Then
         assertEquals(ListenableWorker.Result.success(), result)
         // Verify the scheduling service was called to check if reminder is active
-        verify { 
+        verify {
             schedulingService.isReminderActive(
                 reminder = reminder,
                 dateTime = any<LocalDateTime>()
-            ) 
+            )
         }
     }
 
@@ -132,13 +132,13 @@ class ReminderWorkerTest {
             Reminder(1L, "Reminder 1", LocalTime.of(9, 0), ReminderSchedule.Daily),
             Reminder(2L, "Reminder 2", LocalTime.of(15, 30), ReminderSchedule.Weekly(setOf()))
         )
-        
+
         coEvery { reminderRepository.getActiveReminders() } returns flowOf(reminders)
-        every { 
+        every {
             schedulingService.isReminderActive(
                 reminder = any(),
                 dateTime = any<LocalDateTime>()
-            ) 
+            )
         } returns false // Not active, so no notifications should be shown
 
         // When
@@ -149,11 +149,11 @@ class ReminderWorkerTest {
         // Verify that the repository was queried for active reminders
         coEvery { reminderRepository.getActiveReminders() }
         // Verify that scheduling service was called for both reminders
-        verify(exactly = 2) { 
+        verify(exactly = 2) {
             schedulingService.isReminderActive(
                 reminder = any(),
                 dateTime = any<LocalDateTime>()
-            ) 
+            )
         }
     }
 
@@ -169,11 +169,11 @@ class ReminderWorkerTest {
         )
 
         coEvery { reminderRepository.getActiveReminders() } returns flowOf(listOf(reminder))
-        every { 
+        every {
             schedulingService.isReminderActive(
                 reminder = reminder,
                 dateTime = any<LocalDateTime>()
-            ) 
+            )
         } returns true
 
         // When
@@ -183,11 +183,11 @@ class ReminderWorkerTest {
         assertEquals(ListenableWorker.Result.success(), result)
         // Note: Due to time window logic, this test verifies the notification might be called
         // but doesn't strictly verify it's called since the exact timing depends on execution time
-        verify { 
+        verify {
             schedulingService.isReminderActive(
                 reminder = reminder,
                 dateTime = any<LocalDateTime>()
-            ) 
+            )
         }
     }
 }

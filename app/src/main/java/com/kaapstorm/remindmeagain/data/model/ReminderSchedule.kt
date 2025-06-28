@@ -2,6 +2,7 @@ package com.kaapstorm.remindmeagain.data.model
 
 import androidx.room.TypeConverter
 import java.time.DayOfWeek
+import java.time.LocalDate
 
 sealed class ReminderSchedule {
     data object Daily : ReminderSchedule()
@@ -11,7 +12,7 @@ sealed class ReminderSchedule {
     ) : ReminderSchedule()
     
     data class Fortnightly(
-        val day: DayOfWeek
+        val date: LocalDate
     ) : ReminderSchedule()
     
     data class Monthly(
@@ -33,8 +34,9 @@ sealed class ReminderSchedule {
                     Weekly(days)
                 }
                 value.startsWith("FORTNIGHTLY") -> {
-                    val day = DayOfWeek.valueOf(value.substringAfter("FORTNIGHTLY:"))
-                    Fortnightly(day)
+                    val dateString = value.substringAfter("FORTNIGHTLY:")
+                    val date = LocalDate.parse(dateString)
+                    Fortnightly(date)
                 }
                 value.startsWith("MONTHLY") -> {
                     val parts = value.substringAfter("MONTHLY:").split(",")
@@ -56,7 +58,7 @@ sealed class ReminderSchedule {
             return when (schedule) {
                 is Daily -> "DAILY"
                 is Weekly -> "WEEKLY:${schedule.days.joinToString(",") { it.name }}"
-                is Fortnightly -> "FORTNIGHTLY:${schedule.day}"
+                is Fortnightly -> "FORTNIGHTLY:${schedule.date}"
                 is Monthly -> when {
                     schedule.dayOfMonth != null -> "MONTHLY:${schedule.dayOfMonth}"
                     schedule.dayOfWeek != null && schedule.weekOfMonth != null ->

@@ -18,7 +18,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CompleteAction::class,
         PostponeAction::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -51,11 +51,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Example migration for future schema changes
+        // Migration for fortnightly schedule format change
         val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // This is a placeholder for future migrations
-                // When we need to make schema changes, we'll add the SQL here
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Update fortnightly schedules from FORTNIGHTLY:DAY to FORTNIGHTLY:DATE
+                // Map each day to a corresponding date in January 2025
+                db.execSQL("""
+                    UPDATE reminders
+                    SET schedule = CASE
+                        WHEN schedule = 'FORTNIGHTLY:MONDAY' THEN 'FORTNIGHTLY:2025-01-06'
+                        WHEN schedule = 'FORTNIGHTLY:TUESDAY' THEN 'FORTNIGHTLY:2025-01-07'
+                        WHEN schedule = 'FORTNIGHTLY:WEDNESDAY' THEN 'FORTNIGHTLY:2025-01-01'
+                        WHEN schedule = 'FORTNIGHTLY:THURSDAY' THEN 'FORTNIGHTLY:2025-01-02'
+                        WHEN schedule = 'FORTNIGHTLY:FRIDAY' THEN 'FORTNIGHTLY:2025-01-03'
+                        WHEN schedule = 'FORTNIGHTLY:SATURDAY' THEN 'FORTNIGHTLY:2025-01-04'
+                        WHEN schedule = 'FORTNIGHTLY:SUNDAY' THEN 'FORTNIGHTLY:2025-01-05'
+                        ELSE schedule
+                    END
+                    WHERE schedule LIKE 'FORTNIGHTLY:%'
+                """.trimIndent())
             }
         }
     }
@@ -91,4 +105,4 @@ class Converters {
     fun reminderScheduleToString(schedule: ReminderSchedule?): String? {
         return schedule?.let { ReminderSchedule.toString(it) }
     }
-} 
+}

@@ -9,9 +9,13 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import com.kaapstorm.remindmeagain.data.model.Reminder
+import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
 import java.util.concurrent.TimeUnit
 
-class ReminderScheduler(private val context: Context) {
+class ReminderScheduler(
+    private val context: Context,
+    private val reminderRepository: ReminderRepository  // Injected (if needed directly here, or pass data)
+) {
 
     private val workManager = WorkManager.getInstance(context)
 

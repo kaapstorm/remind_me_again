@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Exact alarm permission for Android 13+ -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <application
         android:name=".RemindMeAgainApplication"
         android:allowBackup="true"
@@ -32,11 +35,13 @@
 
         <!-- Notification action receivers -->
         <receiver
-            android:name=".notifications.actions.CompleteActionReceiver"
+            android:name=".notifications.actions.SnoozeActionHandlerReceiver"
             android:exported="false" />
-        
         <receiver
-            android:name=".notifications.actions.PostponeActionReceiver"
+            android:name=".notifications.actions.ShowSnoozedNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".notifications.actions.DoneActionHandlerReceiver"
             android:exported="false" />
 
         <!-- Boot receiver for rescheduling after reboot -->

@@ -61,13 +61,7 @@ class AddEditReminderViewModel(
                             else -> emptySet()
                         },
                         fortnightlyDate = when (reminder.schedule) {
-                            is ReminderSchedule.Fortnightly -> {
-                                // Find the next occurrence of this day from today
-                                val today = LocalDate.now()
-                                val targetDay = reminder.schedule.day
-                                val daysUntilTarget = (targetDay.value - today.dayOfWeek.value + 7) % 7
-                                if (daysUntilTarget == 0) today else today.plusDays(daysUntilTarget.toLong())
-                            }
+                            is ReminderSchedule.Fortnightly -> reminder.schedule.date
                             else -> null
                         },
                         monthlyDate = when (reminder.schedule) {
@@ -242,7 +236,7 @@ class AddEditReminderViewModel(
             ScheduleType.DAILY -> ReminderSchedule.Daily
             ScheduleType.WEEKLY -> ReminderSchedule.Weekly(_state.value.weeklySelectedDays)
             ScheduleType.FORTNIGHTLY -> ReminderSchedule.Fortnightly(
-                day = _state.value.fortnightlyDate!!.dayOfWeek
+                date = _state.value.fortnightlyDate!!
             )
             ScheduleType.MONTHLY -> {
                 val date = _state.value.monthlyDate!!

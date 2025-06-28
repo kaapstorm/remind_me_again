@@ -45,7 +45,11 @@ class ReminderWorker(
 
                 // Show notification if reminder is active and time is within 15 minutes of current time
                 if (isActive && timeDifferenceMinutes <= 15) {
-                    notificationManager.showReminderNotification(reminder)
+                    notificationManager.showReminderNotification(
+                        reminder,
+                        showLaterButton = true,
+                        isSnoozedNotification = false
+                    )
                 }
             }
 

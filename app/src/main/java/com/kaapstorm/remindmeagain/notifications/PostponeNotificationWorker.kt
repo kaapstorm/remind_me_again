@@ -23,7 +23,11 @@ class PostponeNotificationWorker(
 
             val reminder = reminderRepository.getReminderById(reminderId).first()
             if (reminder != null) {
-                notificationManager.showReminderNotification(reminder)
+                notificationManager.showReminderNotification(
+                    reminder,
+                    showLaterButton = true,
+                    isSnoozedNotification = false
+                )
                 Result.success()
             } else {
                 Result.failure()

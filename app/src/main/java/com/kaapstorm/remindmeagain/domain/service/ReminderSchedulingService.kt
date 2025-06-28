@@ -35,13 +35,13 @@ class ReminderSchedulingService {
             }
             
             is ReminderSchedule.Fortnightly -> {
-                if (dateTime.dayOfWeek != schedule.day) {
+                if (dateTime.dayOfWeek != schedule.date.dayOfWeek) {
                     return false
                 }
                 
                 // For fortnightly, we need to check if this is an even or odd week
-                // Let's use January 1, 2025 as the reference date (week 0)
-                val referenceDate = LocalDate.of(2025, 1, 1)
+                // Use the schedule's date as the reference date
+                val referenceDate = schedule.date
                 val currentDate = dateTime.toLocalDate()
                 
                 // Calculate weeks since reference date

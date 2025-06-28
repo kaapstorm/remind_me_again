@@ -77,7 +77,7 @@ class ReminderScheduleTest {
     
     @Test
     fun testFortnightlySchedule() {
-        val schedule = ReminderSchedule.Fortnightly(DayOfWeek.WEDNESDAY)
+        val schedule = ReminderSchedule.Fortnightly(LocalDate.of(2025, 1, 1)) // Wednesday Jan 1, 2025
         val reminder = Reminder(
             name = reminderName,
             time = reminderTime,

@@ -4,17 +4,22 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
-import android.util.Log
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.kaapstorm.remindmeagain.MainActivity
 import com.kaapstorm.remindmeagain.R
 import com.kaapstorm.remindmeagain.data.model.Reminder
-import com.kaapstorm.remindmeagain.notifications.actions.CompleteActionReceiver
-import com.kaapstorm.remindmeagain.notifications.actions.PostponeActionReceiver
+import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
+import com.kaapstorm.remindmeagain.notifications.actions.DoneActionHandlerReceiver
+import com.kaapstorm.remindmeagain.notifications.actions.SnoozeActionHandlerReceiver
+import kotlinx.coroutines.runBlocking // For simple example, ideally use proper scope from caller
 
-class ReminderNotificationManager(private val context: Context) {
+class ReminderNotificationManager(
+    private val context: Context,
+    private val snoozeStateManager: SnoozeStateManager, // Injected
+    private val reminderRepository: ReminderRepository  // Injected (if needed directly here, or pass data)
+) {
 
     private val notificationManager = NotificationManagerCompat.from(context)
 
@@ -22,71 +27,75 @@ class ReminderNotificationManager(private val context: Context) {
         createNotificationChannel()
     }
 
-    fun showReminderNotification(reminder: Reminder) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra(EXTRA_REMINDER_ID, reminder.id)
-            putExtra(EXTRA_SHOW_REMINDER, true)
+    fun showReminderNotification(
+        reminder: Reminder,
+        nextSnoozeIntervalSeconds: Int = SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS, // Interval for NEXT snooze if "Later" is tapped
+        showLaterButton: Boolean = true, // Whether to show the "Later" button
+        isSnoozedNotification: Boolean = false // Flag to know if this is from a snooze
+    ) {
+        // If this is the first notification for a main reminder instance (not a snooze), reset its snooze state
+        if (!isSnoozedNotification) {
+            snoozeStateManager.clearSnoozeState(reminder.id)
         }
 
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            reminder.id.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val notificationId = reminder.id.toInt() // Using reminder ID as notification ID
 
-        val completeIntent = Intent(context, CompleteActionReceiver::class.java).apply {
+        // Intent for tapping the notification body
+        val contentIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // Or specific flags
             putExtra(EXTRA_REMINDER_ID, reminder.id)
+            // Add other extras if MainActivity needs to navigate to a specific reminder
         }
-        val completePendingIntent = PendingIntent.getBroadcast(
+        val contentPendingIntentFlags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        val contentPendingIntent = PendingIntent.getActivity(context, notificationId, contentIntent, contentPendingIntentFlags)
+
+        // "Done" action
+        val doneIntent = Intent(context, DoneActionHandlerReceiver::class.java).apply {
+            action = SnoozeStateManager.ACTION_DONE_REMINDER
+            putExtra(SnoozeStateManager.EXTRA_REMINDER_ID, reminder.id)
+        }
+        val donePendingIntent = PendingIntent.getBroadcast(
             context,
-            (reminder.id * 10 + 1).toInt(),
-            completeIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            notificationId + 1000, // Ensure unique request code for this PendingIntent
+            doneIntent,
+            contentPendingIntentFlags // Re-using flags
         )
 
-        val postponeIntent = Intent(context, PostponeActionReceiver::class.java).apply {
-            putExtra(EXTRA_REMINDER_ID, reminder.id)
-        }
-        val postponePendingIntent = PendingIntent.getBroadcast(
-            context,
-            (reminder.id * 10 + 2).toInt(),
-            postponeIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground) // REPLACE with your actual icon
             .setContentTitle(context.getString(R.string.notification_title))
             .setContentText(reminder.name)
             .setStyle(NotificationCompat.BigTextStyle().bigText(reminder.name))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // Sound, vibration, lights (if channel allows)
+            .setAutoCancel(true) // Dismiss notification when tapped
+            .setContentIntent(contentPendingIntent)
             .addAction(
-                R.drawable.ic_launcher_foreground,
+                R.drawable.ic_launcher_foreground, // REPLACE icon R.drawable.ic_done_icon
                 context.getString(R.string.done),
-                completePendingIntent
+                donePendingIntent)
+
+        // "Later" action - only add if showLaterButton is true
+        if (showLaterButton) {
+            val laterIntent = Intent(context, SnoozeActionHandlerReceiver::class.java).apply {
+                action = SnoozeStateManager.ACTION_SNOOZE_REMINDER
+                putExtra(SnoozeStateManager.EXTRA_REMINDER_ID, reminder.id)
+                putExtra(SnoozeStateManager.EXTRA_SNOOZE_INTERVAL_SECONDS, nextSnoozeIntervalSeconds)
+            }
+            val laterPendingIntent = PendingIntent.getBroadcast(
+                context,
+                notificationId + 2000, // Ensure unique request code
+                laterIntent,
+                contentPendingIntentFlags // Re-using flags
             )
-            .addAction(
-                R.drawable.ic_launcher_foreground,
+            builder.addAction(
+                R.drawable.ic_launcher_foreground, // REPLACE icon R.drawable.ic_later_icon
                 context.getString(R.string.later),
-                postponePendingIntent
-            )
-            .build()
-
-        try {
-            notificationManager.notify(reminder.id.toInt(), notification)
-        } catch (e: SecurityException) {
-            // Permission not granted, handle gracefully
-            Log.e("ReminderNotificationManager", "SecurityException: Failed to show notification due to missing permission.", e)
+                laterPendingIntent)
         }
-    }
 
-    fun cancelNotification(reminderId: Long) {
-        notificationManager.cancel(reminderId.toInt())
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(notificationId, builder.build())
     }
 
     private fun createNotificationChannel() {
@@ -98,6 +107,7 @@ class ReminderNotificationManager(private val context: Context) {
             description = context.getString(R.string.notification_channel_description)
             enableVibration(true)
             enableLights(true)
+            // setShowBadge(true) // Optional: show a badge on app icon
         }
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

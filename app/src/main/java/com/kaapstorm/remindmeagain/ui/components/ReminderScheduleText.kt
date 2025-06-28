@@ -20,7 +20,7 @@ fun ReminderScheduleText(schedule: ReminderSchedule): String {
         }
 
         is ReminderSchedule.Fortnightly -> {
-            val dayName = schedule.day.getDisplayName(TextStyle.FULL, Locale.getDefault())
+            val dayName = schedule.date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
             stringResource(R.string.schedule_fortnightly_format, dayName)
         }
         
