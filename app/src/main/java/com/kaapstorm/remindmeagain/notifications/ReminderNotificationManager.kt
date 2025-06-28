@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.util.Log
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -78,8 +79,9 @@ class ReminderNotificationManager(private val context: Context) {
 
         try {
             notificationManager.notify(reminder.id.toInt(), notification)
-        } catch (_: SecurityException) {
+        } catch (e: SecurityException) {
             // Permission not granted, handle gracefully
+            Log.e("ReminderNotificationManager", "SecurityException: Failed to show notification due to missing permission.", e)
         }
     }
 
