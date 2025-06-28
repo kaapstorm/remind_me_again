@@ -265,7 +265,7 @@ class AddEditReminderViewModel(
 
 data class AddEditReminderState(
     val name: String = "",
-    val time: LocalTime = LocalTime.of(8, 0),
+    val time: LocalTime = LocalTime.of(12, 0),
     val schedule: ReminderSchedule = ReminderSchedule.Daily,
     val scheduleType: ScheduleType = ScheduleType.DAILY,
     val weeklySelectedDays: Set<DayOfWeek> = emptySet(),

@@ -4,7 +4,6 @@ import com.kaapstorm.remindmeagain.data.model.Reminder
 import com.kaapstorm.remindmeagain.data.model.ReminderSchedule
 import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,15 +37,15 @@ class AddEditReminderViewModelTest {
     }
 
     @Test
-    fun `new reminder has default time of 8 AM`() = runTest {
+    fun `new reminder has default time of midday`() = runTest {
         // Given - creating a new reminder (reminderId = null)
         viewModel = AddEditReminderViewModel(reminderId = null, repository)
 
         // When - checking initial state
         val state = viewModel.state.value
 
-        // Then - time should be default 8:00 AM
-        assertEquals(LocalTime.of(8, 0), state.time)
+        // Then - time should be default 12:00 PM
+        assertEquals(LocalTime.of(12, 0), state.time)
     }
 
     @Test
@@ -125,7 +124,7 @@ class AddEditReminderViewModelTest {
 
         // Then - should maintain default state without crashing
         val state = viewModel.state.value
-        assertEquals(LocalTime.of(8, 0), state.time) // Default time
+        assertEquals(LocalTime.of(12, 0), state.time) // Default time
         assertEquals("", state.name) // Default empty name
     }
 }
