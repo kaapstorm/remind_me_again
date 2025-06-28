@@ -37,6 +37,10 @@
     <string name="postpone_1_hour">1 hr</string>
     <string name="postpone_4_hours">4 hr</string>
     <string name="postpone_12_hours">12 hr</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="delete_reminder">Delete Reminder</string>
+    <string name="delete_reminder_confirmation">Are you sure you want to delete this reminder? This action cannot be undone.</string>
     
     <!-- Validation Messages -->
     <string name="error_name_empty">Please give the reminder a name</string>

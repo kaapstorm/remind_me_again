@@ -29,7 +29,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,6 +54,7 @@ import java.time.format.DateTimeFormatter
 fun ShowReminderScreen(
     reminderId: Long,
     onNavigateBack: () -> Unit,
+    onNavigateToEdit: (Long) -> Unit = {},
     viewModel: ShowReminderViewModel = koinViewModel { parametersOf(reminderId) }
 ) {
     val state by viewModel.state.collectAsState()
@@ -63,8 +66,8 @@ fun ShowReminderScreen(
         }
     }
 
-    LaunchedEffect(state.isCompleted, state.isPostponed) {
-        if (state.isCompleted || state.isPostponed) {
+    LaunchedEffect(state.isCompleted, state.isPostponed, state.isDeleted) {
+        if (state.isCompleted || state.isPostponed || state.isDeleted) {
             onNavigateBack()
         }
     }
@@ -105,7 +108,9 @@ fun ShowReminderScreen(
                         },
                         onSelectPostponeInterval = { interval ->
                             viewModel.handleIntent(ShowReminderIntent.SelectPostponeInterval(interval))
-                        }
+                        },
+                        onEditReminder = { onNavigateToEdit(reminderId) },
+                        onDeleteReminder = { viewModel.handleIntent(ShowReminderIntent.ShowDeleteDialog) }
                     )
                 }
                 else -> {
@@ -118,6 +123,32 @@ fun ShowReminderScreen(
             }
         }
     }
+
+    // Delete confirmation dialog
+    if (state.showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.handleIntent(ShowReminderIntent.HideDeleteDialog) },
+            title = { Text(stringResource(R.string.delete_reminder)) },
+            text = { Text(stringResource(R.string.delete_reminder_confirmation)) },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.handleIntent(ShowReminderIntent.DeleteReminder) }
+                ) {
+                    Text(
+                        text = stringResource(R.string.delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.handleIntent(ShowReminderIntent.HideDeleteDialog) }
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -125,7 +156,9 @@ private fun ReminderDetailsContent(
     state: ShowReminderState,
     onCompleteReminder: () -> Unit,
     onPostponeReminder: (Int) -> Unit,
-    onSelectPostponeInterval: (Int) -> Unit
+    onSelectPostponeInterval: (Int) -> Unit,
+    onEditReminder: () -> Unit,
+    onDeleteReminder: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -272,6 +305,31 @@ private fun ReminderDetailsContent(
                         }
                     }
                 }
+            }
+        }
+
+        // Edit and Delete buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(
+                onClick = onEditReminder,
+                enabled = !state.isProcessing,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.edit))
+            }
+
+            OutlinedButton(
+                onClick = onDeleteReminder,
+                enabled = !state.isProcessing,
+                modifier = Modifier.weight(1f),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text(stringResource(R.string.delete))
             }
         }
     }

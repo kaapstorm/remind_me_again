@@ -22,8 +22,8 @@ fun AppNavigation(
                 onAddReminder = {
                     navController.navigate(Screen.AddReminder.route)
                 },
-                onEditReminder = { reminderId ->
-                    navController.navigate(Screen.EditReminder.createRoute(reminderId))
+                onShowReminder = { reminderId ->
+                    navController.navigate(Screen.ShowReminder.createRoute(reminderId))
                 }
             )
         }
@@ -59,6 +59,9 @@ fun AppNavigation(
                 reminderId = reminderId,
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onNavigateToEdit = { editReminderId ->
+                    navController.navigate(Screen.EditReminder.createRoute(editReminderId))
                 }
             )
         }

@@ -49,7 +49,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ReminderListScreen(
     onAddReminder: () -> Unit,
-    onEditReminder: (Long) -> Unit,
+    onShowReminder: (Long) -> Unit,
     viewModel: ReminderListViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -112,7 +112,7 @@ fun ReminderListScreen(
                         items(state.reminders) { reminder ->
                             ReminderItem(
                                 reminder = reminder,
-                                onClick = { onEditReminder(reminder.id) },
+                                onClick = { onShowReminder(reminder.id) },
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                         }

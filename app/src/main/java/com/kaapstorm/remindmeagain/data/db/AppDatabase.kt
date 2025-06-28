@@ -38,6 +38,13 @@ abstract class AppDatabase : RoomDatabase() {
                     "remind_me_again.db"
                 )
                 .addMigrations(MIGRATION_1_2)
+                .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
+                .addCallback(object : RoomDatabase.Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
+                        db.setForeignKeyConstraintsEnabled(true)
+                    }
+                })
                 .build()
                 INSTANCE = instance
                 instance

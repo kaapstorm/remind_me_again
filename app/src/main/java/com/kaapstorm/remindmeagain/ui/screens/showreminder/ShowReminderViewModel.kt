@@ -33,6 +33,9 @@ class ShowReminderViewModel(
             is ShowReminderIntent.CompleteReminder -> completeReminder()
             is ShowReminderIntent.PostponeReminder -> postponeReminder(intent.intervalSeconds)
             is ShowReminderIntent.SelectPostponeInterval -> selectPostponeInterval(intent.intervalSeconds)
+            is ShowReminderIntent.ShowDeleteDialog -> showDeleteDialog()
+            is ShowReminderIntent.HideDeleteDialog -> hideDeleteDialog()
+            is ShowReminderIntent.DeleteReminder -> deleteReminder()
         }
     }
 
@@ -130,6 +133,34 @@ class ShowReminderViewModel(
     private fun selectPostponeInterval(intervalSeconds: Int) {
         _state.value = _state.value.copy(selectedPostponeInterval = intervalSeconds)
     }
+
+    private fun showDeleteDialog() {
+        _state.value = _state.value.copy(showDeleteDialog = true)
+    }
+
+    private fun hideDeleteDialog() {
+        _state.value = _state.value.copy(showDeleteDialog = false)
+    }
+
+    private fun deleteReminder() {
+        viewModelScope.launch {
+            try {
+                _state.value = _state.value.copy(isProcessing = true, showDeleteDialog = false)
+                
+                reminderRepository.deleteReminder(reminderId)
+                
+                _state.value = _state.value.copy(
+                    isProcessing = false,
+                    isDeleted = true
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isProcessing = false,
+                    error = e.message ?: "Failed to delete reminder"
+                )
+            }
+        }
+    }
 }
 
 data class ShowReminderState(
@@ -141,6 +172,8 @@ data class ShowReminderState(
     val isProcessing: Boolean = false,
     val isCompleted: Boolean = false,
     val isPostponed: Boolean = false,
+    val showDeleteDialog: Boolean = false,
+    val isDeleted: Boolean = false,
     val error: String? = null
 )
 
@@ -149,6 +182,9 @@ sealed class ShowReminderIntent {
     object CompleteReminder : ShowReminderIntent()
     data class PostponeReminder(val intervalSeconds: Int) : ShowReminderIntent()
     data class SelectPostponeInterval(val intervalSeconds: Int) : ShowReminderIntent()
+    object ShowDeleteDialog : ShowReminderIntent()
+    object HideDeleteDialog : ShowReminderIntent()
+    object DeleteReminder : ShowReminderIntent()
 }
 
 object PostponeIntervals {
