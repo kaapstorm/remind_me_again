@@ -17,6 +17,79 @@ Remind Me Again is an offline, local-only app.
 The UI is clean and minimalist.
 
 
+Behavior & Logic
+----------------
+
+### Use Case Example
+
+#### User requirement
+
+Alice needs to take the recycling out in the evening, every second Thursday, so
+that it can be collected.
+
+The last Thursday for collection was June 26, 2025, so she wants to be reminded
+to take out the recycling on the evening of Thursday July 10, 2025, and every
+fortnight after that.
+
+#### User actions
+
+Alice opens the Remind Me Again app, and adds a new reminder.
+
+She sets the **name** to "Take out the recycling". She sets the **time** to
+"21:30". She sets the **schedule** to "Fortnightly". She selects June 26, 2025
+as the **date of the first occurrence**. (**Note** that the first occurrence can
+be in the past.) She saves the new reminder.
+
+#### App behavior
+
+At 21:30 on Thursday July 10, 2025, the app notifies her: "Take out the
+recycling".
+
+Alice is unable to take out the recycling just then, so she taps the button
+labeled "Later" on the notification.
+
+**One minute later**, the app notifies her again: "Take out the recycling".
+
+She taps the button labeled "Later" on the notification again.
+
+**Two minutes later**, the app notifies her again: "Take out the recycling".
+
+This time she takes out the recycling, and taps the button labeled "Done". The
+notification for this reminder does not recur.
+
+A fortnight later, at 21:30 on Thursday July 24, 2025, the app notifies her:
+"Take out the recycling".
+
+### Logic
+
+The "Later" button on the notification will double the interval every time,
+until the "Done" button is tapped.
+
+The interval is reset, so that the next time the user is notified, the first
+interval is 60 seconds. The interval is associated with the notification, not
+the reminder, so that when the reminder recurs, its notification interval starts
+at 60 seconds.
+
+The "Later" interval cannot exceed the time when the reminder is due again. For
+example, if Bob has a reminder named "Walk the dog", set for 12:00 midday, and
+recurring daily, then if the "Later" interval places the next notification after
+12:00 the following day, then the "Later" button should not be shown.
+
+<!-- TODO: Rename "Done"/"CompleteAction" to "Dismiss"/"DismissAction" -->
+
+If the app is killed while a reminder is in a "snoozed" (postponed via "Later")
+state, then when the app restarts (or the next scheduled check happens), it
+should re-notify immediately if the original due time + last snooze delay has
+passed.
+
+The app does not need to be resilient to reboots. In-memory storage is
+sufficient for managing notification intervals.
+
+WorkManager has a minimum interval of 15 minutes, so when a notification is
+snoozed, the app should use `AlarmManager`, with `setExact` to respect
+battery-saving measures.
+
+
 Technical Design Decisions
 -------------------------
 
@@ -40,7 +113,7 @@ Technical Design Decisions
    - Schedule selection: Material3 Chips without custom animations
 
 5. **Background Work & Scheduling**
-   - WorkManager's periodic work with 5-minute minimum interval
+   - WorkManager's periodic work with 15-minute minimum interval
    - Accommodates battery optimization
    - No foreground service required
 
