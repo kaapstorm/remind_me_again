@@ -11,6 +11,10 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.kaapstorm.remindmeagain.notifications.SnoozeStateManager
 import com.kaapstorm.remindmeagain.permissions.ExactAlarmPermissionManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -18,6 +22,7 @@ class SnoozeActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
 
     private val snoozeStateManager: SnoozeStateManager by inject()
     private val exactAlarmPermissionManager: ExactAlarmPermissionManager by inject()
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     @RequiresPermission(Manifest.permission.SCHEDULE_EXACT_ALARM)
     override fun onReceive(context: Context, intent: Intent) {
@@ -32,7 +37,9 @@ class SnoozeActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
 
         Log.d("SnoozeActionHandler", "Snoozing reminder $reminderId for $intervalToScheduleNow seconds.")
 
-        snoozeStateManager.setSnoozeAlarmInterval(reminderId, intervalToScheduleNow)
+        scope.launch {
+            snoozeStateManager.setSnoozeAlarmInterval(reminderId, intervalToScheduleNow)
+        }
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val showSnoozedIntent = Intent(context, ShowSnoozedNotificationReceiver::class.java).apply {

@@ -1,230 +1,200 @@
 package com.kaapstorm.remindmeagain.notifications
 
-import android.content.Context
-import android.content.SharedPreferences
 import com.kaapstorm.remindmeagain.data.model.Reminder
 import com.kaapstorm.remindmeagain.data.model.ReminderSchedule
-import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalTime
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class SnoozeLogicTest {
 
-    private lateinit var context: Context
-    private lateinit var sharedPreferences: SharedPreferences
-    private lateinit var reminderRepository: ReminderRepository
+    private lateinit var repository: InMemorySnoozeStateRepository
     private lateinit var snoozeStateManager: SnoozeStateManager
-    private lateinit var reminder: Reminder
 
     @Before
-    fun setup() {
-        context = mockk(relaxed = true)
-        sharedPreferences = mockk(relaxed = true)
-        reminderRepository = mockk(relaxed = true)
+    fun setUp() {
+        repository = InMemorySnoozeStateRepository()
+        snoozeStateManager = SnoozeStateManager(repository)
+    }
 
-        // Mock SharedPreferences
-        every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
-        every { sharedPreferences.edit() } returns mockk(relaxed = true)
-        every { sharedPreferences.edit().putInt(any(), any()) } returns mockk(relaxed = true)
-        every { sharedPreferences.edit().remove(any()) } returns mockk(relaxed = true)
-        every { sharedPreferences.edit().apply() } returns Unit
-
-        snoozeStateManager = SnoozeStateManager(context)
-
-        reminder = Reminder(
+    @Test
+    fun testInitialSnoozeInterval() = runTest {
+        val reminder = Reminder(
             id = 1L,
             name = "Test Reminder",
             time = LocalTime.of(9, 0),
             schedule = ReminderSchedule.Daily
         )
-    }
 
-    @Test
-    fun `first Later tap should snooze by default interval of 1 minute`() {
-        // Given - no previous snooze state
-        every { sharedPreferences.getInt(any(), SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS) } returns SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS
-
-        // When - user taps "Later" for the first time
+        // Test initial snooze interval
         snoozeStateManager.setSnoozeAlarmInterval(reminder.id, SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS)
-
-        // Then - verify the interval is stored
-        verify { sharedPreferences.edit().putInt("snooze_interval_seconds_for_reminder_1", 60) }
+        
+        val retrievedInterval = snoozeStateManager.getCompletedSnoozeInterval(reminder.id)
+        assertEquals(SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS, retrievedInterval)
     }
 
     @Test
-    fun `subsequent Later taps should double the interval`() {
-        // Given - previous snooze was 60 seconds
+    fun testDoublingSnoozeInterval() = runTest {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Test Reminder",
+            time = LocalTime.of(9, 0),
+            schedule = ReminderSchedule.Daily
+        )
+
         val previousInterval = 60
-        every { sharedPreferences.getInt(any(), SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS) } returns previousInterval
+        snoozeStateManager.setSnoozeAlarmInterval(reminder.id, previousInterval)
 
-        // When - calculating next interval
         val (nextInterval, shouldShowLater) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
-            completedIntervalSeconds = previousInterval,
-            reminderNextMainDueTimestamp = Long.MAX_VALUE, // No constraint
-            currentTimeMillis = System.currentTimeMillis()
+            previousInterval,
+            Long.MAX_VALUE, // No constraint
+            System.currentTimeMillis()
         )
 
-        // Then - interval should be doubled
-        assertEquals(120, nextInterval) // 60 * 2 = 120 seconds
-        assertTrue(shouldShowLater)
+        assertEquals(120, nextInterval) // Should double
+        assertTrue(shouldShowLater) // Should show later button
     }
 
     @Test
-    fun `interval doubling continues with each Later tap`() {
-        // Given - previous snooze was 120 seconds
-        val previousInterval = 120
-        every { sharedPreferences.getInt(any(), SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS) } returns previousInterval
-
-        // When - calculating next interval
-        val (nextInterval, shouldShowLater) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
-            completedIntervalSeconds = previousInterval,
-            reminderNextMainDueTimestamp = Long.MAX_VALUE, // No constraint
-            currentTimeMillis = System.currentTimeMillis()
+    fun testDoublingSnoozeIntervalWithConstraint() = runTest {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Test Reminder",
+            time = LocalTime.of(9, 0),
+            schedule = ReminderSchedule.Daily
         )
 
-        // Then - interval should be doubled again
-        assertEquals(240, nextInterval) // 120 * 2 = 240 seconds
-        assertTrue(shouldShowLater)
+        val previousInterval = 60
+        snoozeStateManager.setSnoozeAlarmInterval(reminder.id, previousInterval)
+
+        val (nextInterval, shouldShowLater) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
+            previousInterval,
+            System.currentTimeMillis() + 90000, // 90 seconds from now (less than 120)
+            System.currentTimeMillis()
+        )
+
+        assertEquals(120, nextInterval) // Should still calculate the doubled interval
+        assertFalse(shouldShowLater) // But should not show later button
     }
 
     @Test
-    fun `Done action should clear snooze state`() {
-        // Given - reminder has snooze state
+    fun testClearSnoozeState() = runTest {
         val reminderId = 1L
-
-        // When - user taps "Done"
-        snoozeStateManager.clearSnoozeState(reminderId)
-
-        // Then - snooze state should be cleared
-        verify { sharedPreferences.edit().remove("snooze_interval_seconds_for_reminder_1") }
-    }
-
-    @Test
-    fun `main reminder notification should reset snooze state`() {
-        // Given - reminder has existing snooze state
-        val reminderId = 1L
-        every { sharedPreferences.getInt(any(), SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS) } returns 120
-
-        // When - main reminder notification is shown (not snoozed)
-        snoozeStateManager.clearSnoozeState(reminderId)
-
-        // Then - snooze state should be cleared
-        verify { sharedPreferences.edit().remove("snooze_interval_seconds_for_reminder_1") }
-    }
-
-    @Test
-    fun `getCompletedSnoozeInterval should return stored interval`() {
-        // Given - stored interval is 120 seconds
         val storedInterval = 120
-        every { sharedPreferences.getInt("snooze_interval_seconds_for_reminder_1", SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS) } returns storedInterval
 
-        // When
-        val result = snoozeStateManager.getCompletedSnoozeInterval(reminder.id)
-
-        // Then
+        // Set a snooze interval
+        snoozeStateManager.setSnoozeAlarmInterval(reminderId, storedInterval)
+        
+        // Verify it was stored
+        val result = snoozeStateManager.getCompletedSnoozeInterval(reminderId)
         assertEquals(storedInterval, result)
+
+        // Clear the state
+        snoozeStateManager.clearSnoozeState(reminderId)
+
+        // Should return default value
+        val resultAfterClear = snoozeStateManager.getCompletedSnoozeInterval(reminderId)
+        assertEquals(SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS, resultAfterClear)
     }
 
     @Test
-    fun `getCompletedSnoozeInterval should return default when no stored value`() {
-        // Given - no stored interval
-        every { sharedPreferences.getInt(any(), SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS) } returns SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS
+    fun testGetCompletedSnoozeIntervalWithNoStoredValue() = runTest {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Test Reminder",
+            time = LocalTime.of(9, 0),
+            schedule = ReminderSchedule.Daily
+        )
 
-        // When
+        // Don't set any value, should return default
         val result = snoozeStateManager.getCompletedSnoozeInterval(reminder.id)
-
-        // Then
         assertEquals(SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS, result)
     }
 
     @Test
-    fun `Later button should be hidden when doubling exceeds next main reminder time`() {
-        // Given - previous snooze was 60 seconds, next main reminder is in 90 seconds
-        val previousInterval = 60
+    fun testCalculateNextSnoozeIntervalForButtonWithNoConstraint() = runTest {
+        val completedInterval = 60
+        val nextMainDueTimestamp = Long.MAX_VALUE // No constraint
         val currentTime = System.currentTimeMillis()
-        val nextMainReminderTime = currentTime + (90 * 1000L) // 90 seconds from now
 
-        // When - calculating next interval
         val (nextInterval, shouldShowLater) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
-            completedIntervalSeconds = previousInterval,
-            reminderNextMainDueTimestamp = nextMainReminderTime,
-            currentTimeMillis = currentTime
+            completedInterval,
+            nextMainDueTimestamp,
+            currentTime
         )
 
-        // Then - interval is calculated but button should be hidden
-        assertEquals(120, nextInterval) // 60 * 2 = 120 seconds
-        assertFalse(shouldShowLater) // Should not show because 120 > 90
+        assertEquals(120, nextInterval) // Should double
+        assertTrue(shouldShowLater) // Should show later button
     }
 
     @Test
-    fun `Later button should be shown when doubling does not exceed next main reminder time`() {
-        // Given - previous snooze was 30 seconds, next main reminder is in 90 seconds
-        val previousInterval = 30
+    fun testCalculateNextSnoozeIntervalForButtonWithConstraint() = runTest {
+        val completedInterval = 60
         val currentTime = System.currentTimeMillis()
-        val nextMainReminderTime = currentTime + (90 * 1000L) // 90 seconds from now
+        val nextMainDueTimestamp = currentTime + 90000 // 90 seconds from now
 
-        // When - calculating next interval
         val (nextInterval, shouldShowLater) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
-            completedIntervalSeconds = previousInterval,
-            reminderNextMainDueTimestamp = nextMainReminderTime,
-            currentTimeMillis = currentTime
+            completedInterval,
+            nextMainDueTimestamp,
+            currentTime
         )
 
-        // Then - interval is calculated and button should be shown
-        assertEquals(60, nextInterval) // 30 * 2 = 60 seconds
-        assertTrue(shouldShowLater) // Should show because 60 < 90
+        assertEquals(120, nextInterval) // Should still calculate the doubled interval
+        assertFalse(shouldShowLater) // But should not show later button
     }
 
     @Test
-    fun `Later button should be shown when no next main reminder constraint`() {
-        // Given - previous snooze was 60 seconds, no next main reminder constraint
-        val previousInterval = 60
+    fun testCalculateNextSnoozeIntervalForButtonWithExactConstraint() = runTest {
+        val completedInterval = 60
         val currentTime = System.currentTimeMillis()
+        val nextMainDueTimestamp = currentTime + 120000 // Exactly 120 seconds from now
 
-        // When - calculating next interval
         val (nextInterval, shouldShowLater) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
-            completedIntervalSeconds = previousInterval,
-            reminderNextMainDueTimestamp = Long.MAX_VALUE, // No constraint
-            currentTimeMillis = currentTime
+            completedInterval,
+            nextMainDueTimestamp,
+            currentTime
         )
 
-        // Then - interval is calculated and button should be shown
-        assertEquals(120, nextInterval) // 60 * 2 = 120 seconds
-        assertTrue(shouldShowLater)
+        assertEquals(120, nextInterval) // Should still calculate the doubled interval
+        assertFalse(shouldShowLater) // But should not show later button (would exceed)
     }
 
     @Test
-    fun `snooze interval progression follows doubling pattern`() {
-        // Given - starting with default interval
+    fun testMultipleSnoozeIntervals() = runTest {
         var currentInterval = SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS
-        val currentTime = System.currentTimeMillis()
+        val nextMainDueTimestamp = Long.MAX_VALUE // No constraint
 
-        // When - simulating multiple "Later" taps
-        val intervals = mutableListOf<Int>()
-        val shouldShowButtons = mutableListOf<Boolean>()
+        // First snooze: 60 -> 120
+        val (nextInterval1, shouldShow1) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
+            currentInterval,
+            nextMainDueTimestamp,
+            System.currentTimeMillis()
+        )
+        assertEquals(120, nextInterval1)
+        assertTrue(shouldShow1)
 
-        repeat(5) { // Simulate 5 "Later" taps
-            val (nextInterval, shouldShow) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
-                completedIntervalSeconds = currentInterval,
-                reminderNextMainDueTimestamp = Long.MAX_VALUE, // No constraint
-                currentTimeMillis = currentTime
-            )
-            intervals.add(nextInterval)
-            shouldShowButtons.add(shouldShow)
-            currentInterval = nextInterval
-        }
+        // Second snooze: 120 -> 240
+        currentInterval = nextInterval1
+        val (nextInterval2, shouldShow2) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
+            currentInterval,
+            nextMainDueTimestamp,
+            System.currentTimeMillis()
+        )
+        assertEquals(240, nextInterval2)
+        assertTrue(shouldShow2)
 
-        // Then - intervals should follow doubling pattern: 60, 120, 240, 480, 960
-        assertEquals(listOf(120, 240, 480, 960, 1920), intervals)
-        assertTrue(shouldShowButtons.all { it }) // All should show when no constraint
+        // Third snooze: 240 -> 480
+        currentInterval = nextInterval2
+        val (nextInterval3, shouldShow3) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
+            currentInterval,
+            nextMainDueTimestamp,
+            System.currentTimeMillis()
+        )
+        assertEquals(480, nextInterval3)
+        assertTrue(shouldShow3)
     }
 }

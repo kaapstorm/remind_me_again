@@ -73,6 +73,9 @@ dependencies {
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
 
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+
     // Koin
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)

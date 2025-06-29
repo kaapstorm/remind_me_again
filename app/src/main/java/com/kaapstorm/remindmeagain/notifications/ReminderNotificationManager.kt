@@ -35,7 +35,9 @@ class ReminderNotificationManager(
     ) {
         // If this is the first notification for a main reminder instance (not a snooze), reset its snooze state
         if (!isSnoozedNotification) {
-            snoozeStateManager.clearSnoozeState(reminder.id)
+            runBlocking {
+                snoozeStateManager.clearSnoozeState(reminder.id)
+            }
         }
 
         val notificationId = reminder.id.toInt() // Using reminder ID as notification ID

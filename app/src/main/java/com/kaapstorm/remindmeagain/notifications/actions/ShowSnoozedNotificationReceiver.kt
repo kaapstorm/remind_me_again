@@ -33,10 +33,6 @@ class ShowSnoozedNotificationReceiver : BroadcastReceiver(), KoinComponent {
             return
         }
 
-        // This is the interval that was *just completed* to trigger this receiver
-        val completedSnoozeInterval = snoozeStateManager.getCompletedSnoozeInterval(reminderId)
-        Log.d("ShowSnoozedReceiver", "Showing snoozed notification for reminder $reminderId. Completed snooze: $completedSnoozeInterval s")
-
         scope.launch {
             val reminder = reminderRepository.getReminderById(reminderId).first() // Suspending call
             if (reminder == null) {
@@ -44,6 +40,10 @@ class ShowSnoozedNotificationReceiver : BroadcastReceiver(), KoinComponent {
                 snoozeStateManager.clearSnoozeState(reminderId) // Clean up if reminder is gone
                 return@launch
             }
+
+            // This is the interval that was *just completed* to trigger this receiver
+            val completedSnoozeInterval = snoozeStateManager.getCompletedSnoozeInterval(reminderId)
+            Log.d("ShowSnoozedReceiver", "Showing snoozed notification for reminder $reminderId. Completed snooze: $completedSnoozeInterval s")
 
             // Calculate the next main due timestamp for the reminder
             val nextMainDueTimestamp = getNextMainOccurrenceTimestamp(reminder)

@@ -1,24 +1,17 @@
 package com.kaapstorm.remindmeagain.notifications
 
-import android.content.Context
-import android.content.SharedPreferences
 import com.kaapstorm.remindmeagain.data.model.Reminder // Assuming you have this
 import com.kaapstorm.remindmeagain.data.repository.ReminderRepository // For fetching next due time
-import java.util.Calendar
 
+/**
+ * Manages snooze state for reminders.
+ * Uses dependency injection to allow for different storage implementations.
+ */
 class SnoozeStateManager(
-    private val context: Context,
-    // We'll need ReminderRepository to fetch the reminder's next main due time for the constraint
-    // This creates a dependency. Ensure ReminderRepository is available when SnoozeStateManager is used.
-    // Alternatively, pass the nextDueTimestamp directly to calculateNextSnooze.
-    // For now, let's assume it's passed directly to keep SnoozeStateManager simpler.
+    private val repository: SnoozeStateRepository
 ) {
 
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences("snooze_prefs", Context.MODE_PRIVATE) // Renamed for clarity
-
     companion object {
-        private const val KEY_SNOOZE_INTERVAL_PREFIX = "snooze_interval_seconds_for_reminder_"
         const val DEFAULT_INITIAL_SNOOZE_SECONDS = 60 // 1 minute
 
         // Action for the intent that triggers SnoozeActionHandlerReceiver
@@ -37,8 +30,8 @@ class SnoozeStateManager(
      * This is called from SnoozeActionHandlerReceiver when "Later" is tapped.
      * The value stored here is the duration of the upcoming snooze.
      */
-    fun setSnoozeAlarmInterval(reminderId: Long, intervalSeconds: Int) {
-        prefs.edit().putInt("$KEY_SNOOZE_INTERVAL_PREFIX$reminderId", intervalSeconds).apply()
+    suspend fun setSnoozeAlarmInterval(reminderId: Long, intervalSeconds: Int) {
+        repository.setSnoozeAlarmInterval(reminderId, intervalSeconds)
     }
 
     /**
@@ -48,16 +41,16 @@ class SnoozeStateManager(
      * or the state was cleared. Defaulting to a sensible value or handling it is important.
      * However, since alarms are restored, this should ideally always find a value if an alarm fired.
      */
-    fun getCompletedSnoozeInterval(reminderId: Long): Int {
-        return prefs.getInt("$KEY_SNOOZE_INTERVAL_PREFIX$reminderId", DEFAULT_INITIAL_SNOOZE_SECONDS)
+    suspend fun getCompletedSnoozeInterval(reminderId: Long): Int {
+        return repository.getCompletedSnoozeInterval(reminderId)
     }
 
     /**
      * Resets/clears the snooze state for a reminder.
      * Called when "Done" is tapped or when a new main instance of a reminder is shown.
      */
-    fun clearSnoozeState(reminderId: Long) {
-        prefs.edit().remove("$KEY_SNOOZE_INTERVAL_PREFIX$reminderId").apply()
+    suspend fun clearSnoozeState(reminderId: Long) {
+        repository.clearSnoozeState(reminderId)
     }
 
     /**
