@@ -45,14 +45,20 @@ be in the past.) She saves the new reminder.
 At 21:30 on Thursday July 10, 2025, the app notifies her: "Take out the
 recycling".
 
+Alice ignores the notification. **One minute later** the same notification is
+triggered again. And then **one minute after that** the same notification is
+triggered again. The app keeps triggering the notification until Alice
+interacts with the notification.
+
 Alice is unable to take out the recycling just then, so she taps the button
 labeled "Later" on the notification.
 
-**One minute later**, the app notifies her again: "Take out the recycling".
+**Two minutes later**, the notification is triggered again. The app will
+continue to repeat the notification every two minutes.
 
-She taps the button labeled "Later" on the notification again.
+Alice taps the button labeled "Later" on the notification again.
 
-**Two minutes later**, the app notifies her again: "Take out the recycling".
+**Four minutes later**, the notification is triggered again.
 
 This time she takes out the recycling, and taps the button labeled "Dismiss".
 The notification for this reminder does not recur.
@@ -91,6 +97,8 @@ battery-saving measures.
 Technical Design Decisions
 -------------------------
 
+Targeted devices are Android 13+ (API 33+)
+
 1. **Data Layer & Persistence**
    - Use Kotlin Coroutines for asynchronous database operations
    - RoomDatabase classes are versioned with RoomDatabase.Migration objects
@@ -111,14 +119,16 @@ Technical Design Decisions
    - Schedule selection: Material3 Chips without custom animations
 
 5. **Background Work & Scheduling**
-   - WorkManager's periodic work with 15-minute minimum interval
-   - Accommodates battery optimization
-   - No foreground service required
+   - All reminder and repeat notification scheduling is handled by AlarmManager.
+   - AlarmManager is used for exact timing of reminders and for repeating notifications (including snooze/postpone logic).
+   - No foreground service required.
+   - The app does not attempt to bypass Doze or battery optimizations, and does not use setExactAndAllowWhileIdle.
 
 6. **Testing Strategy**
    - JUnit4 for unit tests
    - Espresso for UI testing
-   - Integration tests for database and WorkManager
+   - Instrumented tests for AlarmManager-based scheduling and notification logic
+   - Integration tests for database
 
 7. **Error Handling**
    - No centralized error handling system
@@ -274,16 +284,20 @@ ReminderSchedule
 Notification Behavior
 ---------------------
 
-- Uses AlarmManager/WorkManager for scheduling.
+- Uses AlarmManager for all scheduling (initial, repeat, and snooze notifications).
 - Notification includes reminder name, "Dismiss", and "Later" actions.
-- "Later" doubles the postpone interval each time (1, 2, 4, ... minutes).
+- When a reminder is due, a notification is shown at the exact scheduled time.
+- If the user does not interact, the notification is re-posted every minute (or at a doubling interval if "Later" is pressed), until the user taps "Later" or "Dismiss".
+- The "Later" button doubles the interval each time (1, 2, 4, ... minutes), up to the next scheduled main occurrence.
+- If the app is killed or swiped away, repeat notifications continue (state is persisted with Jetpack DataStore).
+- If the user ignores the notification for a long time, repeats continue until the next main reminder instance is due.
 
 
 Permissions & Background Work
 ----------------------------
 
 - Request `POST_NOTIFICATIONS` (Android 13+).
-- Use WorkManager for reliable background scheduling.
+- All background scheduling is via AlarmManager.
 
 
 Accessibility & Localization
@@ -302,7 +316,7 @@ Error Handling & Testing
 - Show general error messages using Snackbar.
 - Unit tests using JUnit5
 - UI tests using Espresso
-- Integration tests for database and WorkManager
+- Integration tests for database
 - Database migrations must be covered by tests
 - Domain logic must be covered by tests
 - UI functionality must be covered by tests
