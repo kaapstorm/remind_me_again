@@ -62,7 +62,8 @@ fun AppNavigation(
                 },
                 onNavigateToEdit = { editReminderId ->
                     navController.navigate(Screen.EditReminder.createRoute(editReminderId))
-                }
+                },
+                navController = navController
             )
         }
     }

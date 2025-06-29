@@ -48,6 +48,10 @@ import com.kaapstorm.remindmeagain.ui.components.ReminderScheduleText
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import java.time.format.DateTimeFormatter
+import androidx.navigation.NavController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,10 +59,27 @@ fun ShowReminderScreen(
     reminderId: Long,
     onNavigateBack: () -> Unit,
     onNavigateToEdit: (Long) -> Unit = {},
-    viewModel: ShowReminderViewModel = koinViewModel { parametersOf(reminderId) }
+    viewModel: ShowReminderViewModel = koinViewModel { parametersOf(reminderId) },
+    navController: NavController? = null
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Listen for navigation resume to refresh reminder, if navController is provided
+    navController?.let { controller ->
+        val navBackStackEntry = controller.currentBackStackEntry
+        DisposableEffect(navBackStackEntry) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    viewModel.handleIntent(ShowReminderIntent.LoadReminder)
+                }
+            }
+            navBackStackEntry?.lifecycle?.addObserver(observer)
+            onDispose {
+                navBackStackEntry?.lifecycle?.removeObserver(observer)
+            }
+        }
+    }
 
     LaunchedEffect(state.error) {
         state.error?.let { error ->
