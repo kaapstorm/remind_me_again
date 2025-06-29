@@ -14,8 +14,8 @@ import org.koin.dsl.module
 
 val notificationModule = module {
     single<SnoozeStateRepository> { DataStoreSnoozeStateRepository(androidContext()) }
-    single { ReminderNotificationManager(androidContext(), get(), get()) } // Added SnoozeStateManager, ReminderRepository
-    single { ReminderScheduler(androidContext(), get()) } // Context and ReminderRepository
+    single { ReminderNotificationManager(androidContext(), get(), get()) }
+    single { ReminderScheduler(androidContext(), get()) } // Will use AlarmManager only
     single { SnoozeStateManager(get()) } // Inject the repository
     single {
         val context = androidContext()

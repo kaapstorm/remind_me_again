@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class BootReceiver : BroadcastReceiver(), KoinComponent {
 
@@ -15,7 +18,9 @@ class BootReceiver : BroadcastReceiver(), KoinComponent {
             intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             
             // Reschedule all reminders after device reboot or app update
-            reminderScheduler.rescheduleAllReminders()
+            CoroutineScope(Dispatchers.Default).launch {
+                reminderScheduler.rescheduleAllReminders()
+            }
         }
     }
 }

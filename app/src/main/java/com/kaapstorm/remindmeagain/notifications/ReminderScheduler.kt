@@ -1,92 +1,111 @@
 package com.kaapstorm.remindmeagain.notifications
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequest
-import androidx.work.PeriodicWorkRequest
-import androidx.work.WorkManager
+import android.content.Intent
 import com.kaapstorm.remindmeagain.data.model.Reminder
 import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
-import java.util.concurrent.TimeUnit
 
+/**
+ * Schedules and manages reminder and repeat alarms using AlarmManager.
+ */
 class ReminderScheduler(
     private val context: Context,
-    private val reminderRepository: ReminderRepository  // Injected (if needed directly here, or pass data)
+    private val reminderRepository: ReminderRepository
 ) {
+    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    private val workManager = WorkManager.getInstance(context)
+    /**
+     * Schedule a reminder to trigger at the specified time (in millis).
+     * This is used for the initial due notification.
+     */
+    fun scheduleReminder(reminder: Reminder, triggerAtMillis: Long) {
+        val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
+            putExtra(ReminderAlarmReceiver.EXTRA_REMINDER_ID, reminder.id)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            reminder.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+    }
+
+    /**
+     * Cancel a scheduled reminder alarm.
+     */
+    fun cancelReminder(reminderId: Long) {
+        val intent = Intent(context, ReminderAlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            reminderId.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
+    }
+
+    /**
+     * Schedule a repeat alarm for a reminder (e.g., for snooze/repeat interval).
+     * This will trigger a broadcast to ReminderAlarmReceiver.
+     */
+    fun scheduleRepeat(reminderId: Long, intervalSeconds: Int) {
+        val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
+            putExtra(ReminderAlarmReceiver.EXTRA_REMINDER_ID, reminderId)
+            putExtra(ReminderAlarmReceiver.EXTRA_IS_REPEAT, true)
+            putExtra(ReminderAlarmReceiver.EXTRA_REPEAT_INTERVAL_SECONDS, intervalSeconds)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            (reminderId + 10000).toInt(), // Use a different request code for repeat
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val triggerAtMillis = System.currentTimeMillis() + intervalSeconds * 1000L
+        alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+    }
+
+    /**
+     * Cancel a scheduled repeat alarm for a reminder.
+     */
+    fun cancelRepeat(reminderId: Long) {
+        val intent = Intent(context, ReminderAlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            (reminderId + 10000).toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
+    }
+
+    /**
+     * Reschedule all reminders and repeats from the repository and snooze state.
+     * Call this on app startup or after device reboot.
+     */
+    suspend fun rescheduleAllReminders() {
+        // TODO: Query all reminders and snooze state, and reschedule alarms as needed
+    }
 
     fun startPeriodicReminderCheck() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-            .setRequiresBatteryNotLow(false)
-            .setRequiresCharging(false)
-            .setRequiresDeviceIdle(false)
-            .setRequiresStorageNotLow(false)
-            .build()
-
-        val reminderCheckRequest = PeriodicWorkRequest.Builder(
-            ReminderWorker::class.java,
-            15, // Minimum interval for periodic work is 15 minutes
-            TimeUnit.MINUTES
-        )
-            .setConstraints(constraints)
-            .addTag(ReminderWorker.TAG)
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
-            ReminderWorker.WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            reminderCheckRequest
-        )
+        // TODO: Implement
     }
 
     fun stopPeriodicReminderCheck() {
-        workManager.cancelUniqueWork(ReminderWorker.WORK_NAME)
+        // TODO: Implement
     }
 
     fun schedulePostponeNotification(reminder: Reminder, intervalSeconds: Int) {
-        val postponeRequest = OneTimeWorkRequest.Builder(PostponeNotificationWorker::class.java)
-            .setInitialDelay(intervalSeconds.toLong(), TimeUnit.SECONDS)
-            .setInputData(
-                androidx.work.Data.Builder()
-                    .putLong(PostponeNotificationWorker.KEY_REMINDER_ID, reminder.id)
-                    .build()
-            )
-            .addTag("postpone_${reminder.id}")
-            .build()
-
-        workManager.enqueueUniqueWork(
-            "postpone_${reminder.id}",
-            ExistingWorkPolicy.REPLACE,
-            postponeRequest
-        )
+        // TODO: Implement
     }
 
     fun cancelPostponeNotification(reminderId: Long) {
-        workManager.cancelUniqueWork("postpone_$reminderId")
-    }
-
-    fun rescheduleAllReminders() {
-        // Cancel existing work
-        stopPeriodicReminderCheck()
-        
-        // Restart periodic check
-        startPeriodicReminderCheck()
+        // TODO: Implement
     }
 
     fun triggerImmediateReminderCheck() {
-        val immediateCheckRequest = OneTimeWorkRequest.Builder(ReminderWorker::class.java)
-            .addTag("immediate_reminder_check")
-            .build()
-
-        workManager.enqueueUniqueWork(
-            "immediate_reminder_check",
-            ExistingWorkPolicy.REPLACE,
-            immediateCheckRequest
-        )
+        // TODO: Implement
     }
 }

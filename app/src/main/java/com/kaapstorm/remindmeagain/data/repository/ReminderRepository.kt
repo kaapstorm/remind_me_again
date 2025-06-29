@@ -29,6 +29,8 @@ class ReminderRepository(
     
     fun getRemindersByTime(time: LocalTime): Flow<List<Reminder>> = reminderDao.getByTime(time)
 
+    suspend fun getReminderByIdSuspend(id: Long): Reminder? = reminderDao.getById(id)
+
     // Action operations
     suspend fun insertDismissAction(action: DismissAction) = reminderActionDao.insertDismissAction(action)
     

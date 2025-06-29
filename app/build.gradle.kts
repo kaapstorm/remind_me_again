@@ -70,9 +70,6 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    // WorkManager
-    implementation(libs.androidx.work.runtime.ktx)
-
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
@@ -101,5 +98,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     androidTestImplementation(libs.androidx.room.testing)
-    androidTestImplementation(libs.androidx.work.testing)
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.androidx.rules)
 }
