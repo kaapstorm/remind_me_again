@@ -175,11 +175,40 @@ App Navigation & Screen Flow
    +--------------------------------------+
    ```
 
-   ![Reminder List Mockup](img/reminder_list.png)
+2. **Show Reminder Screen**
+   - Shows reminder details.
+   - If due: "Dismiss" and "Postpone" actions.
+   - If the reminder will be due on the same day: "Dismiss" only.
+   - If the user taps Delete, they are shown a confirmation dialog. If they
+     confirm then the reminder is deleted. Use a standard Material 3
+     AlertDialog with "Cancel" and "Delete" buttons.
+   - Deleting a reminder takes the user back to the Reminder List Screen
+   - Clicking "Edit" takes the user to the Add/Edit Reminder Screen
 
-2. **Add/Edit Reminder Screen**
+   ```plaintext
+   +--------------------------------------+
+   | Reminder Details                     |
+   |--------------------------------------|
+   | Name: Morning Meds                   |
+   | Last done: 2025-06-28 07:45          |
+   | Next due: 07:30                      |
+   |                                      |
+   | [ Reminder is due! ]                 |
+   | [ Dismiss ]   [ Postpone > ]         |  <-- Buttons
+   |                                      |
+   | Postpone:                            |
+   |   ( ) 5 min   ( ) 15 min             |  <-- RadioGroup
+   |   ( ) 1 hr    ( ) 4 hr   ( ) 12 hr   |
+   |                                      |
+   | [ Edit ]   [ Delete ]                |  <-- Buttons
+   +--------------------------------------+
+   ```
+
+3. **Add/Edit Reminder Screen**
    - Fields: Name (EditText), Time (TimePicker), Schedule (custom UI).
    - Save/Cancel buttons.
+   - Clicking "Save" when editing takes the user back to the Show Reminder
+     Screen. The Show Reminder Screen must refresh to show the updated details.
 
    ```plaintext
    +--------------------------------------+
@@ -197,36 +226,6 @@ App Navigation & Screen Flow
    +--------------------------------------+
    ```
 
-   ![Add Reminder Mockup](img/add_reminder.png)
-
-3. **Show Reminder Screen**
-   - Shows reminder details.
-   - If due: "Dismiss" and "Postpone" actions.
-   - If the reminder will be due on the same day: "Dismiss" only.
-   - If the user taps Delete, they are shown a confirmation dialog. If they
-     confirm then the reminder is deleted. Use a standard Material 3
-     AlertDialog with "Cancel" and "Delete" buttons.
-
-   ```plaintext
-   +--------------------------------------+
-   | Reminder Details                     |
-   |--------------------------------------|
-   | Name: Morning Meds                   |
-   | Last done: 07:45 AM                  |
-   |                                      |
-   | [ Reminder is due! ]                 |
-   | [ Dismiss ]   [ Postpone > ]         |  <-- Buttons
-   |                                      |
-   | Postpone:                            |
-   |   ( ) 5 min   ( ) 15 min             |  <-- RadioGroup
-   |   ( ) 1 hr    ( ) 4 hr   ( ) 12 hr   |
-   |                                      |
-   | [ Edit ]   [ Delete ]                |  <-- Buttons
-   +--------------------------------------+
-   ```
-
-   ![Show Reminder Mockup](img/show_reminder.png)
-
 4. **Notification**
    - Appears when a reminder is due.
    - Shows name, "Dismiss", and "Later" actions.
@@ -239,8 +238,6 @@ App Navigation & Screen Flow
    | [ Dismiss ]   [ Later ]              |  <-- Notification actions
    +--------------------------------------+
    ```
-
-   ![Notification Mockup](img/notification.png)
 
 
 UI Elements & Layouts
@@ -259,7 +256,7 @@ Data Model
 |-------------------|---------------------------------------------|
 | Reminder          | id (int), name (string), time (time), schedule (ReminderSchedule) |
 | ReminderAction    | id (int), reminderId (int, FK), lastActionId (int, nullable, FK) |
-| CompleteAction    | id (int, FK), timestamp (datetime)          |
+| DismissAction     | id (int, FK), timestamp (datetime)          |
 | PostponeAction    | id (int, FK), timestamp (datetime), intervalSeconds (int) |
 
 - Use Room for local storage.
