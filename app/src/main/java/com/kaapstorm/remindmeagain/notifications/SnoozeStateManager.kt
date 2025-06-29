@@ -18,8 +18,8 @@ class SnoozeStateManager(
         const val ACTION_SNOOZE_REMINDER = "com.kaapstorm.remindmeagain.ACTION_SNOOZE_REMINDER"
         // Action for the intent that triggers ShowSnoozedNotificationReceiver
         const val ACTION_SHOW_SNOOZED_NOTIFICATION = "com.kaapstorm.remindmeagain.ACTION_SHOW_SNOOZED_NOTIFICATION"
-        // Action for the intent that triggers DoneActionHandlerReceiver
-        const val ACTION_DONE_REMINDER = "com.kaapstorm.remindmeagain.ACTION_DONE_REMINDER"
+        // Action for the intent that triggers DismissActionHandlerReceiver
+        const val ACTION_DISMISS_REMINDER = "com.kaapstorm.remindmeagain.ACTION_DISMISS_REMINDER"
 
         const val EXTRA_REMINDER_ID = "reminder_id"
         const val EXTRA_SNOOZE_INTERVAL_SECONDS = "snooze_interval_seconds"
@@ -47,7 +47,7 @@ class SnoozeStateManager(
 
     /**
      * Resets/clears the snooze state for a reminder.
-     * Called when "Done" is tapped or when a new main instance of a reminder is shown.
+     * Called when "Dismiss" is tapped or when a new main instance of a reminder is shown.
      */
     suspend fun clearSnoozeState(reminderId: Long) {
         repository.clearSnoozeState(reminderId)

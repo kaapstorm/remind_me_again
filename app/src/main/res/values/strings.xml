@@ -29,7 +29,7 @@
     <string name="reminder_details">Reminder Details</string>
     <string name="last_completed">Last completed: %s</string>
     <string name="reminder_is_due">Reminder is due!</string>
-    <string name="done">Done</string>
+    <string name="dismiss">Dismiss</string>
     <string name="postpone">Postpone</string>
     <string name="postpone_options">Postpone:</string>
     <string name="postpone_5_min">5 min</string>

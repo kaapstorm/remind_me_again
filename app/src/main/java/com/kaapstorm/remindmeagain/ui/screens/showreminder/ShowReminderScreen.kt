@@ -43,7 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kaapstorm.remindmeagain.R
-import com.kaapstorm.remindmeagain.data.model.CompleteAction
+import com.kaapstorm.remindmeagain.data.model.DismissAction
 import com.kaapstorm.remindmeagain.ui.components.ReminderScheduleText
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -66,8 +66,8 @@ fun ShowReminderScreen(
         }
     }
 
-    LaunchedEffect(state.isCompleted, state.isPostponed, state.isDeleted) {
-        if (state.isCompleted || state.isPostponed || state.isDeleted) {
+    LaunchedEffect(state.isDismissed, state.isPostponed, state.isDeleted) {
+        if (state.isDismissed || state.isPostponed || state.isDeleted) {
             onNavigateBack()
         }
     }
@@ -102,7 +102,7 @@ fun ShowReminderScreen(
                 state.reminder != null -> {
                     ReminderDetailsContent(
                         state = state,
-                        onCompleteReminder = { viewModel.handleIntent(ShowReminderIntent.CompleteReminder) },
+                        onDismissReminder = { viewModel.handleIntent(ShowReminderIntent.DismissReminder) },
                         onPostponeReminder = { interval ->
                             viewModel.handleIntent(ShowReminderIntent.PostponeReminder(interval))
                         },
@@ -154,7 +154,7 @@ fun ShowReminderScreen(
 @Composable
 private fun ReminderDetailsContent(
     state: ShowReminderState,
-    onCompleteReminder: () -> Unit,
+    onDismissReminder: () -> Unit,
     onPostponeReminder: (Int) -> Unit,
     onSelectPostponeInterval: (Int) -> Unit,
     onEditReminder: () -> Unit,
@@ -195,18 +195,16 @@ private fun ReminderDetailsContent(
                 
                 // Last completed info
                 state.lastAction?.let { action ->
-                    if (action is CompleteAction) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(
-                                R.string.last_completed,
-                                action.timestamp.atZone(java.time.ZoneId.systemDefault())
-                                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.last_completed,
+                            action.timestamp.atZone(java.time.ZoneId.systemDefault())
+                                .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -240,7 +238,7 @@ private fun ReminderDetailsContent(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Button(
-                    onClick = onCompleteReminder,
+                    onClick = onDismissReminder,
                     enabled = !state.isProcessing,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -251,7 +249,7 @@ private fun ReminderDetailsContent(
                                 .width(16.dp)
                         )
                     } else {
-                        Text(stringResource(R.string.done))
+                        Text(stringResource(R.string.dismiss))
                     }
                 }
 

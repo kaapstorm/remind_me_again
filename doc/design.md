@@ -54,8 +54,8 @@ She taps the button labeled "Later" on the notification again.
 
 **Two minutes later**, the app notifies her again: "Take out the recycling".
 
-This time she takes out the recycling, and taps the button labeled "Done". The
-notification for this reminder does not recur.
+This time she takes out the recycling, and taps the button labeled "Dismiss".
+The notification for this reminder does not recur.
 
 A fortnight later, at 21:30 on Thursday July 24, 2025, the app notifies her:
 "Take out the recycling".
@@ -63,7 +63,7 @@ A fortnight later, at 21:30 on Thursday July 24, 2025, the app notifies her:
 ### Logic
 
 The "Later" button on the notification will double the interval every time,
-until the "Done" button is tapped.
+until the "Dismiss" button is tapped.
 
 The interval is reset, so that the next time the user is notified, the first
 interval is 60 seconds. The interval is associated with the notification, not
@@ -74,8 +74,6 @@ The "Later" interval cannot exceed the time when the reminder is due again. For
 example, if Bob has a reminder named "Walk the dog", set for 12:00 midday, and
 recurring daily, then if the "Later" interval places the next notification after
 12:00 the following day, then the "Later" button should not be shown.
-
-<!-- TODO: Rename "Done"/"CompleteAction" to "Dismiss"/"DismissAction" -->
 
 If the app is killed while a reminder is in a "snoozed" (postponed via "Later")
 state, then when the app restarts (or the next scheduled check happens), it
@@ -203,8 +201,8 @@ App Navigation & Screen Flow
 
 3. **Show Reminder Screen**
    - Shows reminder details.
-   - If due: "Done" and "Postpone" actions.
-   - If the reminder will be due on the same day: "Done" only.
+   - If due: "Dismiss" and "Postpone" actions.
+   - If the reminder will be due on the same day: "Dismiss" only.
    - If the user taps Delete, they are shown a confirmation dialog. If they
      confirm then the reminder is deleted. Use a standard Material 3
      AlertDialog with "Cancel" and "Delete" buttons.
@@ -217,7 +215,7 @@ App Navigation & Screen Flow
    | Last done: 07:45 AM                  |
    |                                      |
    | [ Reminder is due! ]                 |
-   | [ Done ]   [ Postpone > ]            |  <-- Buttons
+   | [ Dismiss ]   [ Postpone > ]         |  <-- Buttons
    |                                      |
    | Postpone:                            |
    |   ( ) 5 min   ( ) 15 min             |  <-- RadioGroup
@@ -231,14 +229,14 @@ App Navigation & Screen Flow
 
 4. **Notification**
    - Appears when a reminder is due.
-   - Shows name, "Done", and "Later" actions.
+   - Shows name, "Dismiss", and "Later" actions.
    - Tap name to open "Show Reminder" screen.
 
    ```plaintext
    +--------------------------------------+
    | 🔔 Reminder: Morning Meds            |
    |--------------------------------------|
-   | [ Done ]   [ Later ]                 |  <-- Notification actions
+   | [ Dismiss ]   [ Later ]              |  <-- Notification actions
    +--------------------------------------+
    ```
 
@@ -280,7 +278,7 @@ Notification Behavior
 ---------------------
 
 - Uses AlarmManager/WorkManager for scheduling.
-- Notification includes reminder name, "Done", and "Later" actions.
+- Notification includes reminder name, "Dismiss", and "Later" actions.
 - "Later" doubles the postpone interval each time (1, 2, 4, ... minutes).
 
 
@@ -398,8 +396,8 @@ titles. When editing, the current values should be pre-filled.
 
 ### Notification Integration
 
-Notification should have "Done" and "Later" actions, and if the user presses the
-name of the reminder, they should be taken to the Reminder Details / Show
+Notification should have "Dismiss" and "Later" actions, and if the user presses
+the name of the reminder, they should be taken to the Reminder Details / Show
 Reminder screen.
 
 ### Validation

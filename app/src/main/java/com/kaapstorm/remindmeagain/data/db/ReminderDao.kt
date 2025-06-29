@@ -10,7 +10,7 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders ORDER BY time ASC")
     fun getAll(): Flow<List<Reminder>>
 
-    @Query("SELECT * FROM reminders WHERE id NOT IN (SELECT reminderId FROM complete_actions) ORDER BY time ASC")
+    @Query("SELECT * FROM reminders WHERE id NOT IN (SELECT reminderId FROM dismiss_actions) ORDER BY time ASC")
     fun getActive(): Flow<List<Reminder>>
 
     @Query("SELECT * FROM reminders WHERE time = :time ORDER BY id ASC")

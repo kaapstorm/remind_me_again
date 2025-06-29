@@ -2,7 +2,7 @@ package com.kaapstorm.remindmeagain.ui.screens.showreminder
 
 import com.kaapstorm.remindmeagain.data.model.Reminder
 import com.kaapstorm.remindmeagain.data.model.ReminderSchedule
-import com.kaapstorm.remindmeagain.data.model.CompleteAction
+import com.kaapstorm.remindmeagain.data.model.DismissAction
 import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
 import com.kaapstorm.remindmeagain.domain.service.ReminderSchedulingService
 import io.mockk.coEvery
@@ -51,7 +51,7 @@ class ShowReminderViewModelTest {
         val reminder = Reminder(id = reminderId, name = "Test Reminder", time = LocalTime.of(10, 0), schedule = ReminderSchedule.Daily)
         
         coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
-        coEvery { repository.getCompleteActionsForReminder(reminderId) } returns flowOf(emptyList())
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
         every { schedulingService.isReminderActive(any(), any()) } returns false
         
         viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
@@ -73,7 +73,7 @@ class ShowReminderViewModelTest {
         val reminder = Reminder(id = reminderId, name = "Test Reminder", time = LocalTime.of(10, 0), schedule = ReminderSchedule.Daily)
         
         coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
-        coEvery { repository.getCompleteActionsForReminder(reminderId) } returns flowOf(emptyList())
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
         every { schedulingService.isReminderActive(any(), any()) } returns false
         
         viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
@@ -96,7 +96,7 @@ class ShowReminderViewModelTest {
         val reminder = Reminder(id = reminderId, name = "Test Reminder", time = LocalTime.of(10, 0), schedule = ReminderSchedule.Daily)
         
         coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
-        coEvery { repository.getCompleteActionsForReminder(reminderId) } returns flowOf(emptyList())
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
         coEvery { repository.deleteReminder(reminderId) } returns Unit
         every { schedulingService.isReminderActive(any(), any()) } returns false
         
@@ -126,7 +126,7 @@ class ShowReminderViewModelTest {
         val errorMessage = "Delete failed"
         
         coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
-        coEvery { repository.getCompleteActionsForReminder(reminderId) } returns flowOf(emptyList())
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
         coEvery { repository.deleteReminder(reminderId) } throws RuntimeException(errorMessage)
         every { schedulingService.isReminderActive(any(), any()) } returns false
         
@@ -147,19 +147,61 @@ class ShowReminderViewModelTest {
     fun `loading reminder works correctly`() = runTest {
         val reminderId = 1L
         val reminder = Reminder(id = reminderId, name = "Test Reminder", time = LocalTime.of(10, 0), schedule = ReminderSchedule.Daily)
-        val completeAction = CompleteAction(reminderId = reminderId, timestamp = Instant.now())
-        
         coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
-        coEvery { repository.getCompleteActionsForReminder(reminderId) } returns flowOf(listOf(completeAction))
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
         every { schedulingService.isReminderActive(any(), any()) } returns true
-        
+
         viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
         testDispatcher.scheduler.advanceUntilIdle()
-        
+
         // Verify state is loaded correctly
         assertEquals(reminder, viewModel.state.value.reminder)
-        assertEquals(completeAction, viewModel.state.value.lastAction)
         assertTrue(viewModel.state.value.isDue)
         assertFalse(viewModel.state.value.isLoading)
+        assertEquals(null, viewModel.state.value.lastAction)
+    }
+
+    @Test
+    fun `should dismiss reminder successfully`() = runTest {
+        // Given
+        val reminderId = 1L
+        val reminder = Reminder(id = reminderId, name = "Test Reminder", time = LocalTime.of(10, 0), schedule = ReminderSchedule.Daily)
+        coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
+        coEvery { repository.insertDismissAction(any()) } returns 1L
+        every { schedulingService.isReminderActive(any(), any()) } returns false
+
+        // When
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
+        viewModel.handleIntent(ShowReminderIntent.DismissReminder)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        assertTrue(viewModel.state.value.isDismissed)
+        assertFalse(viewModel.state.value.isProcessing)
+        coVerify { repository.insertDismissAction(any()) }
+    }
+
+    @Test
+    fun `should dismiss reminder successfully with DismissAction`() = runTest {
+        // Given
+        val reminderId = 1L
+        val reminder = Reminder(id = reminderId, name = "Test Reminder", time = LocalTime.of(10, 0), schedule = ReminderSchedule.Daily)
+        val dismissAction = DismissAction(reminderId = reminderId, timestamp = Instant.now())
+        coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(listOf(dismissAction))
+        coEvery { repository.insertDismissAction(any()) } returns 1L
+        every { schedulingService.isReminderActive(any(), any()) } returns false
+
+        // When
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
+        viewModel.handleIntent(ShowReminderIntent.DismissReminder)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        assertTrue(viewModel.state.value.isDismissed)
+        assertFalse(viewModel.state.value.isProcessing)
+        coVerify { repository.insertDismissAction(any()) }
+        assertEquals(dismissAction, viewModel.state.value.lastAction)
     }
 }

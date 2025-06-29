@@ -41,7 +41,7 @@
             android:name=".notifications.actions.ShowSnoozedNotificationReceiver"
             android:exported="false" />
         <receiver
-            android:name=".notifications.actions.DoneActionHandlerReceiver"
+            android:name=".notifications.actions.DismissActionHandlerReceiver"
             android:exported="false" />
 
         <!-- Boot receiver for rescheduling after reboot -->

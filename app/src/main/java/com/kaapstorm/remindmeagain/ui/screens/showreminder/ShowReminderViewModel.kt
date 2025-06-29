@@ -3,10 +3,9 @@ package com.kaapstorm.remindmeagain.ui.screens.showreminder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
-import com.kaapstorm.remindmeagain.data.model.CompleteAction
 import com.kaapstorm.remindmeagain.data.model.PostponeAction
 import com.kaapstorm.remindmeagain.data.model.Reminder
-import com.kaapstorm.remindmeagain.data.model.ReminderAction
+import com.kaapstorm.remindmeagain.data.model.DismissAction
 import com.kaapstorm.remindmeagain.domain.service.ReminderSchedulingService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +29,7 @@ class ShowReminderViewModel(
     fun handleIntent(intent: ShowReminderIntent) {
         when (intent) {
             is ShowReminderIntent.LoadReminder -> loadReminder()
-            is ShowReminderIntent.CompleteReminder -> completeReminder()
+            is ShowReminderIntent.DismissReminder -> dismissReminder()
             is ShowReminderIntent.PostponeReminder -> postponeReminder(intent.intervalSeconds)
             is ShowReminderIntent.SelectPostponeInterval -> selectPostponeInterval(intent.intervalSeconds)
             is ShowReminderIntent.ShowDeleteDialog -> showDeleteDialog()
@@ -47,7 +46,7 @@ class ShowReminderViewModel(
                 reminderRepository.getReminderById(reminderId).collect { reminder ->
                     if (reminder != null) {
                         // For now, just get the most recent complete action
-                        reminderRepository.getCompleteActionsForReminder(reminderId).collect { actions ->
+                        reminderRepository.getDismissActionsForReminder(reminderId).collect { actions ->
                             val lastAction = actions.maxByOrNull { it.timestamp }
                             
                             // Calculate if reminder is due using the scheduling service
@@ -79,26 +78,26 @@ class ShowReminderViewModel(
         }
     }
 
-    private fun completeReminder() {
+    private fun dismissReminder() {
         viewModelScope.launch {
             try {
                 _state.value = _state.value.copy(isProcessing = true)
                 
-                val action = CompleteAction(
+                val action = DismissAction(
                     reminderId = reminderId,
                     timestamp = Instant.now()
                 )
                 
-                reminderRepository.insertCompleteAction(action)
+                reminderRepository.insertDismissAction(action)
                 
                 _state.value = _state.value.copy(
                     isProcessing = false,
-                    isCompleted = true
+                    isDismissed = true
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     isProcessing = false,
-                    error = e.message ?: "Failed to complete reminder"
+                    error = e.message ?: "Failed to dismiss reminder"
                 )
             }
         }
@@ -166,11 +165,11 @@ class ShowReminderViewModel(
 data class ShowReminderState(
     val isLoading: Boolean = false,
     val reminder: Reminder? = null,
-    val lastAction: ReminderAction? = null,
+    val lastAction: DismissAction? = null,
     val isDue: Boolean = false,
     val selectedPostponeInterval: Int = 300, // 5 minutes default
     val isProcessing: Boolean = false,
-    val isCompleted: Boolean = false,
+    val isDismissed: Boolean = false,
     val isPostponed: Boolean = false,
     val showDeleteDialog: Boolean = false,
     val isDeleted: Boolean = false,
@@ -179,7 +178,7 @@ data class ShowReminderState(
 
 sealed class ShowReminderIntent {
     object LoadReminder : ShowReminderIntent()
-    object CompleteReminder : ShowReminderIntent()
+    object DismissReminder : ShowReminderIntent()
     data class PostponeReminder(val intervalSeconds: Int) : ShowReminderIntent()
     data class SelectPostponeInterval(val intervalSeconds: Int) : ShowReminderIntent()
     object ShowDeleteDialog : ShowReminderIntent()

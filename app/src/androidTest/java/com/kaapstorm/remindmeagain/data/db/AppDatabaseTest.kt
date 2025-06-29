@@ -84,7 +84,7 @@ class AppDatabaseTest {
     }
 
     @Test
-    fun testCompleteActionInsertAndRetrieve() = runBlocking {
+    fun testDismissActionInsertAndRetrieve() = runBlocking {
         // Create test data
         val reminder = Reminder(
             name = "Test Reminder",
@@ -93,21 +93,21 @@ class AppDatabaseTest {
         )
         val reminderId = reminderDao.insert(reminder)
 
-        val completeAction = CompleteAction(
+        val dismissAction = DismissAction(
             reminderId = reminderId,
             timestamp = Instant.now()
         )
 
         // Insert action
-        val id = reminderActionDao.insertCompleteAction(completeAction)
+        val id = reminderActionDao.insertDismissAction(dismissAction)
         assertTrue(id > 0)
 
         // Retrieve and verify
-        val actions = reminderActionDao.getCompleteActionsForReminder(reminderId).first()
+        val actions = reminderActionDao.getDismissActionsForReminder(reminderId).first()
         assertTrue(actions.isNotEmpty())
-        val retrieved = actions.first() as CompleteAction
-        assertEquals(completeAction.reminderId, retrieved.reminderId)
-        assertEquals(completeAction.timestamp.epochSecond, retrieved.timestamp.epochSecond)
+        val retrieved = actions.first() as DismissAction
+        assertEquals(dismissAction.reminderId, retrieved.reminderId)
+        assertEquals(dismissAction.timestamp.epochSecond, retrieved.timestamp.epochSecond)
     }
 
     @Test
@@ -157,12 +157,12 @@ class AppDatabaseTest {
         reminderDao.insert(activeReminder)
         val inactiveId = reminderDao.insert(inactiveReminder)
 
-        // Create a complete action for the inactive reminder
-        val completeAction = CompleteAction(
+        // Create a dismiss action for the inactive reminder
+        val dismissAction = DismissAction(
             reminderId = inactiveId,
             timestamp = Instant.now()
         )
-        reminderActionDao.insertCompleteAction(completeAction)
+        reminderActionDao.insertDismissAction(dismissAction)
 
         // Verify active reminders
         val activeReminders = reminderDao.getActive().first()

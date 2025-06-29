@@ -11,7 +11,7 @@ import com.kaapstorm.remindmeagain.MainActivity
 import com.kaapstorm.remindmeagain.R
 import com.kaapstorm.remindmeagain.data.model.Reminder
 import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
-import com.kaapstorm.remindmeagain.notifications.actions.DoneActionHandlerReceiver
+import com.kaapstorm.remindmeagain.notifications.actions.DismissActionHandlerReceiver
 import com.kaapstorm.remindmeagain.notifications.actions.SnoozeActionHandlerReceiver
 import kotlinx.coroutines.runBlocking // For simple example, ideally use proper scope from caller
 
@@ -51,15 +51,15 @@ class ReminderNotificationManager(
         val contentPendingIntentFlags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         val contentPendingIntent = PendingIntent.getActivity(context, notificationId, contentIntent, contentPendingIntentFlags)
 
-        // "Done" action
-        val doneIntent = Intent(context, DoneActionHandlerReceiver::class.java).apply {
-            action = SnoozeStateManager.ACTION_DONE_REMINDER
+        // "Dismiss" action
+        val dismissIntent = Intent(context, DismissActionHandlerReceiver::class.java).apply {
+            action = SnoozeStateManager.ACTION_DISMISS_REMINDER
             putExtra(SnoozeStateManager.EXTRA_REMINDER_ID, reminder.id)
         }
-        val donePendingIntent = PendingIntent.getBroadcast(
+        val dismissPendingIntent = PendingIntent.getBroadcast(
             context,
             notificationId + 1000, // Ensure unique request code for this PendingIntent
-            doneIntent,
+            dismissIntent,
             contentPendingIntentFlags // Re-using flags
         )
 
@@ -73,9 +73,9 @@ class ReminderNotificationManager(
             .setAutoCancel(true) // Dismiss notification when tapped
             .setContentIntent(contentPendingIntent)
             .addAction(
-                R.drawable.ic_launcher_foreground, // REPLACE icon R.drawable.ic_done_icon
-                context.getString(R.string.done),
-                donePendingIntent)
+                R.drawable.ic_launcher_foreground, // REPLACE icon R.drawable.ic_dismiss_icon
+                context.getString(R.string.dismiss),
+                dismissPendingIntent)
 
         // "Later" action - only add if showLaterButton is true
         if (showLaterButton) {

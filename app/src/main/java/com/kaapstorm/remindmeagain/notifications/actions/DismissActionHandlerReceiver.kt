@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class DoneActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
+class DismissActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
 
     private val snoozeStateManager: SnoozeStateManager by inject()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -22,10 +22,10 @@ class DoneActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
         val reminderId = intent.getLongExtra(SnoozeStateManager.EXTRA_REMINDER_ID, -1L)
 
         if (reminderId == -1L) {
-            Log.e("DoneActionHandler", "Invalid reminderId")
+            Log.e("DismissActionHandler", "Invalid reminderId")
             return
         }
-        Log.d("DoneActionHandler", "Reminder $reminderId marked as done (notification dismissed).")
+        Log.d("DismissActionHandler", "Reminder $reminderId dismissed (notification dismissed).")
 
         scope.launch {
             snoozeStateManager.clearSnoozeState(reminderId)

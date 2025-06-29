@@ -15,10 +15,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         Reminder::class,
-        CompleteAction::class,
+        DismissAction::class,
         PostponeAction::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -37,7 +37,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "remind_me_again.db"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
@@ -70,6 +70,14 @@ abstract class AppDatabase : RoomDatabase() {
                     END
                     WHERE schedule LIKE 'FORTNIGHTLY:%'
                 """.trimIndent())
+            }
+        }
+
+        // Migration for renaming CompleteAction to DismissAction
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Rename complete_actions table to dismiss_actions
+                db.execSQL("ALTER TABLE complete_actions RENAME TO dismiss_actions")
             }
         }
     }
