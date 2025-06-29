@@ -61,18 +61,15 @@ class SnoozeActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
         try {
             if (!exactAlarmPermissionManager.canScheduleExactAlarms()) {
                 Log.w("SnoozeActionHandler", "Cannot schedule exact alarms. Snooze functionality may not work properly.")
-                // Note: We could show a notification to the user here to guide them to settings
-                // For now, we'll try to schedule the alarm anyway, but it might not work
             }
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, showSnoozedPendingIntent)
         } catch (se: SecurityException) {
             Log.e("SnoozeActionHandler", "SecurityException on setting exact alarm. Check SCHEDULE_EXACT_ALARM permission.", se)
-            // Handle error: Maybe show a toast or a different notification
             return
         }
 
         // Dismiss the current notification
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(reminderId.toInt()) // Assuming notification ID is reminderId
+        notificationManager.cancel(reminderId.toInt())
     }
 }

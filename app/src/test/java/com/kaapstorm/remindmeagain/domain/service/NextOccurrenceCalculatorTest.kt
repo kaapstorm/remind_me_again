@@ -209,4 +209,257 @@ class NextOccurrenceCalculatorTest {
             Long.MAX_VALUE, 
             nextOccurrence)
     }
+
+    @Test
+    fun `daily reminder - same day future time`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Daily Test",
+            time = LocalTime.of(18, 0),
+            schedule = ReminderSchedule.Daily
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 12, 0) // 12:00 PM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 15, 18, 0)
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `daily reminder - same day past time`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Daily Test",
+            time = LocalTime.of(8, 0),
+            schedule = ReminderSchedule.Daily
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 12, 0) // 12:00 PM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 16, 8, 0)
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `weekly reminder - next occurrence this week`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Weekly Test",
+            time = LocalTime.of(9, 0),
+            schedule = ReminderSchedule.Weekly(setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY))
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 8, 0) // Wednesday 8:00 AM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 15, 9, 0) // Wednesday 9:00 AM
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `weekly reminder - next occurrence next week`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Weekly Test",
+            time = LocalTime.of(9, 0),
+            schedule = ReminderSchedule.Weekly(setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY))
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 10, 0) // Wednesday 10:00 AM (past reminder time)
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 17, 9, 0) // Friday 9:00 AM
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `weekly reminder - wraps to next week`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Weekly Test",
+            time = LocalTime.of(9, 0),
+            schedule = ReminderSchedule.Weekly(setOf(DayOfWeek.MONDAY))
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 10, 0) // Wednesday 10:00 AM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 20, 9, 0) // Next Monday 9:00 AM
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `fortnightly reminder - correct week`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Fortnightly Test",
+            time = LocalTime.of(14, 0),
+            schedule = ReminderSchedule.Fortnightly(LocalDate.of(2025, 1, 1)) // Wednesday
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 12, 0) // Wednesday 12:00 PM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 29, 14, 0) // Next fortnightly Wednesday 2:00 PM
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `fortnightly reminder - wrong week`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Fortnightly Test",
+            time = LocalTime.of(14, 0),
+            schedule = ReminderSchedule.Fortnightly(LocalDate.of(2025, 1, 1)) // Wednesday
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 22, 12, 0) // Next Wednesday 12:00 PM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 29, 14, 0) // Week after next Wednesday 2:00 PM
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `monthly by day of month - valid day`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Monthly Test",
+            time = LocalTime.of(10, 0),
+            schedule = ReminderSchedule.Monthly(dayOfMonth = 15)
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 10, 8, 0) // January 10th 8:00 AM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 15, 10, 0) // January 15th 10:00 AM
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `monthly by day of month - past time this month`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Monthly Test",
+            time = LocalTime.of(10, 0),
+            schedule = ReminderSchedule.Monthly(dayOfMonth = 15)
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 12, 0) // January 15th 12:00 PM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 2, 15, 10, 0) // February 15th 10:00 AM
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `monthly by day of month - invalid day (February 30th)`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Monthly Test",
+            time = LocalTime.of(10, 0),
+            schedule = ReminderSchedule.Monthly(dayOfMonth = 30)
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 8, 0) // January 15th 8:00 AM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 30, 10, 0) // January 30th 10:00 AM
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `monthly by day of month - invalid day in February`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Monthly Test",
+            time = LocalTime.of(10, 0),
+            schedule = ReminderSchedule.Monthly(dayOfMonth = 30)
+        )
+        val currentTime = LocalDateTime.of(2025, 2, 15, 8, 0) // February 15th 8:00 AM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 3, 1, 10, 0) // March 1st 10:00 AM (next month)
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `monthly by nth weekday - 3rd Wednesday`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Monthly Test",
+            time = LocalTime.of(16, 0),
+            schedule = ReminderSchedule.Monthly(dayOfWeek = DayOfWeek.WEDNESDAY, weekOfMonth = 3)
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 10, 12, 0) // January 10th 12:00 PM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 15, 16, 0) // 3rd Wednesday of January
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `monthly by nth weekday - past time this month`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Monthly Test",
+            time = LocalTime.of(16, 0),
+            schedule = ReminderSchedule.Monthly(dayOfWeek = DayOfWeek.WEDNESDAY, weekOfMonth = 3)
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 18, 0) // January 15th 6:00 PM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 2, 19, 16, 0) // 3rd Wednesday of February
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `monthly by nth weekday - 5th week doesn't exist`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Monthly Test",
+            time = LocalTime.of(16, 0),
+            schedule = ReminderSchedule.Monthly(dayOfWeek = DayOfWeek.WEDNESDAY, weekOfMonth = 5)
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 10, 12, 0) // January 10th 12:00 PM
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        val expected = LocalDateTime.of(2025, 1, 29, 16, 0) // 5th Wednesday of January
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `monthly invalid schedule returns max value`() {
+        val reminder = Reminder(
+            id = 1L,
+            name = "Invalid Monthly Test",
+            time = LocalTime.of(10, 0),
+            schedule = ReminderSchedule.Monthly() // No day specified
+        )
+        val currentTime = LocalDateTime.of(2025, 1, 15, 8, 0)
+
+        val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+
+        assertEquals(Long.MAX_VALUE, result)
+    }
 } 

@@ -1,7 +1,7 @@
 package com.kaapstorm.remindmeagain.notifications
 
-import com.kaapstorm.remindmeagain.data.model.Reminder // Assuming you have this
-import com.kaapstorm.remindmeagain.data.repository.ReminderRepository // For fetching next due time
+import com.kaapstorm.remindmeagain.data.model.Reminder
+import com.kaapstorm.remindmeagain.notifications.SnoozeStateRepository
 
 /**
  * Manages snooze state for reminders.

@@ -231,7 +231,7 @@ class AppDatabaseTest {
         val reminderId = reminderDao.insert(reminder)
 
         // Create actions for the reminder
-        val completeAction = CompleteAction(
+        val dismissAction = DismissAction(
             reminderId = reminderId,
             timestamp = Instant.now()
         )
@@ -241,13 +241,13 @@ class AppDatabaseTest {
             intervalSeconds = 300
         )
 
-        reminderActionDao.insertCompleteAction(completeAction)
+        reminderActionDao.insertDismissAction(dismissAction)
         reminderActionDao.insertPostponeAction(postponeAction)
 
         // Verify actions exist
-        val completeActions = reminderActionDao.getCompleteActionsForReminder(reminderId).first()
+        val dismissActions = reminderActionDao.getDismissActionsForReminder(reminderId).first()
         val postponeActions = reminderActionDao.getPostponeActionsForReminder(reminderId).first()
-        assertTrue(completeActions.isNotEmpty())
+        assertTrue(dismissActions.isNotEmpty())
         assertTrue(postponeActions.isNotEmpty())
 
         // Delete reminder by ID

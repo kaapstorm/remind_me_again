@@ -31,7 +31,8 @@ class DismissActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
             snoozeStateManager.clearSnoozeState(reminderId)
         }
 
+        // Dismiss the current notification
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(reminderId.toInt()) // Assuming notification ID is reminderId
+        notificationManager.cancel(reminderId.toInt())
     }
 }

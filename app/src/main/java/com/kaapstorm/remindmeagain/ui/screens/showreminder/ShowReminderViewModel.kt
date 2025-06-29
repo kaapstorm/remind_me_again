@@ -45,7 +45,6 @@ class ShowReminderViewModel(
                 
                 reminderRepository.getReminderById(reminderId).collect { reminder ->
                     if (reminder != null) {
-                        // For now, just get the most recent complete action
                         reminderRepository.getDismissActionsForReminder(reminderId).collect { actions ->
                             val lastAction = actions.maxByOrNull { it.timestamp }
                             

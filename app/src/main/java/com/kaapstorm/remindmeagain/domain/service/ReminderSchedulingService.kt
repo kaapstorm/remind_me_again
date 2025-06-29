@@ -12,15 +12,15 @@ import java.time.LocalDate
 class ReminderSchedulingService {
     
     /**
-     * Determines if a reminder should be active at a given date/time.
+     * Checks if a reminder is active at a given date/time.
      * 
      * @param reminder The reminder to check
-     * @param dateTime The date/time to check against
+     * @param dateTime The date/time to check if the reminder is active
      * @return true if the reminder should be active at the given date/time
      */
     fun isReminderActive(reminder: Reminder, dateTime: LocalDateTime): Boolean {
-        val reminderTime = reminder.time
         val schedule = reminder.schedule
+        val reminderTime = reminder.time
         
         // Check if the time matches
         if (dateTime.toLocalTime() != reminderTime) {

@@ -64,7 +64,7 @@ class ReminderNotificationManager(
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // REPLACE with your actual icon
+            .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Replace with your actual icon
             .setContentTitle(context.getString(R.string.notification_title))
             .setContentText(reminder.name)
             .setStyle(NotificationCompat.BigTextStyle().bigText(reminder.name))
@@ -73,7 +73,7 @@ class ReminderNotificationManager(
             .setAutoCancel(true) // Dismiss notification when tapped
             .setContentIntent(contentPendingIntent)
             .addAction(
-                R.drawable.ic_launcher_foreground, // REPLACE icon R.drawable.ic_dismiss_icon
+                R.drawable.ic_launcher_foreground, // TODO: Replace icon R.drawable.ic_dismiss_icon
                 context.getString(R.string.dismiss),
                 dismissPendingIntent)
 
@@ -91,7 +91,7 @@ class ReminderNotificationManager(
                 contentPendingIntentFlags // Re-using flags
             )
             builder.addAction(
-                R.drawable.ic_launcher_foreground, // REPLACE icon R.drawable.ic_later_icon
+                R.drawable.ic_launcher_foreground, // TODO: Replace icon R.drawable.ic_later_icon
                 context.getString(R.string.later),
                 laterPendingIntent)
         }
