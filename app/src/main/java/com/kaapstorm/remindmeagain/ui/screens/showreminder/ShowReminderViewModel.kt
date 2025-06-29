@@ -7,6 +7,7 @@ import com.kaapstorm.remindmeagain.data.model.PostponeAction
 import com.kaapstorm.remindmeagain.data.model.Reminder
 import com.kaapstorm.remindmeagain.data.model.DismissAction
 import com.kaapstorm.remindmeagain.domain.service.ReminderSchedulingService
+import com.kaapstorm.remindmeagain.notifications.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +17,8 @@ import java.time.Instant
 class ShowReminderViewModel(
     private val reminderId: Long,
     private val reminderRepository: ReminderRepository,
-    private val schedulingService: ReminderSchedulingService
+    private val schedulingService: ReminderSchedulingService,
+    private val reminderScheduler: ReminderScheduler
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ShowReminderState())
@@ -146,6 +148,7 @@ class ShowReminderViewModel(
                 _state.value = _state.value.copy(isProcessing = true, showDeleteDialog = false)
                 
                 reminderRepository.deleteReminder(reminderId)
+                reminderScheduler.cancelReminder(reminderId)
                 
                 _state.value = _state.value.copy(
                     isProcessing = false,

@@ -17,18 +17,24 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.assertEquals
 import java.time.LocalTime
+import com.kaapstorm.remindmeagain.notifications.ReminderScheduler
+import com.kaapstorm.remindmeagain.domain.service.NextOccurrenceCalculator
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AddEditReminderViewModelTest {
 
     private lateinit var repository: ReminderRepository
     private lateinit var viewModel: AddEditReminderViewModel
+    private lateinit var reminderScheduler: ReminderScheduler
+    private lateinit var nextOccurrenceCalculator: NextOccurrenceCalculator
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         repository = mockk()
+        reminderScheduler = mockk(relaxed = true)
+        nextOccurrenceCalculator = mockk(relaxed = true)
     }
 
     @After
@@ -39,7 +45,7 @@ class AddEditReminderViewModelTest {
     @Test
     fun `new reminder has default time of midday`() = runTest {
         // Given - creating a new reminder (reminderId = null)
-        viewModel = AddEditReminderViewModel(reminderId = null, repository)
+        viewModel = AddEditReminderViewModel(reminderId = null, repository, reminderScheduler, nextOccurrenceCalculator)
 
         // When - checking initial state
         val state = viewModel.state.value
@@ -63,7 +69,7 @@ class AddEditReminderViewModelTest {
         coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
 
         // When - creating ViewModel for editing
-        viewModel = AddEditReminderViewModel(reminderId = reminderId, repository)
+        viewModel = AddEditReminderViewModel(reminderId = reminderId, repository, reminderScheduler, nextOccurrenceCalculator)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then - state should contain the loaded reminder's time
@@ -89,7 +95,7 @@ class AddEditReminderViewModelTest {
         coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
 
         // When - creating ViewModel for editing
-        viewModel = AddEditReminderViewModel(reminderId = reminderId, repository)
+        viewModel = AddEditReminderViewModel(reminderId = reminderId, repository, reminderScheduler, nextOccurrenceCalculator)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then - time should be correctly loaded regardless of schedule type
@@ -101,7 +107,7 @@ class AddEditReminderViewModelTest {
     @Test
     fun `time updates correctly when changed via intent`() = runTest {
         // Given - new reminder with default time
-        viewModel = AddEditReminderViewModel(reminderId = null, repository)
+        viewModel = AddEditReminderViewModel(reminderId = null, repository, reminderScheduler, nextOccurrenceCalculator)
         val newTime = LocalTime.of(14, 15) // 2:15 PM
 
         // When - updating time via intent
@@ -119,7 +125,7 @@ class AddEditReminderViewModelTest {
         coEvery { repository.getReminderById(reminderId) } returns flowOf(null)
 
         // When - creating ViewModel for editing
-        viewModel = AddEditReminderViewModel(reminderId = reminderId, repository)
+        viewModel = AddEditReminderViewModel(reminderId = reminderId, repository, reminderScheduler, nextOccurrenceCalculator)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Then - should maintain default state without crashing

@@ -8,6 +8,6 @@ import org.koin.dsl.module
 
 val uiModule = module {
     viewModel { ReminderListViewModel(get()) }
-    viewModel { (reminderId: Long?) -> AddEditReminderViewModel(reminderId, get()) }
-    viewModel { (reminderId: Long) -> ShowReminderViewModel(reminderId, get(), get()) }
+    viewModel { (reminderId: Long?) -> AddEditReminderViewModel(reminderId, get(), get(), get()) }
+    viewModel { (reminderId: Long) -> ShowReminderViewModel(reminderId, get(), get(), get()) }
 }

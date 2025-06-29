@@ -10,6 +10,20 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.LocalDateTime
 import java.time.ZoneId
+import com.kaapstorm.remindmeagain.ui.screens.addeditreminder.AddEditReminderViewModel
+import com.kaapstorm.remindmeagain.notifications.ReminderScheduler
+import io.mockk.mockk
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.verify
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.junit.After
 
 class NextOccurrenceCalculatorTest {
     
@@ -461,5 +475,74 @@ class NextOccurrenceCalculatorTest {
         val result = calculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
 
         assertEquals(Long.MAX_VALUE, result)
+    }
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class AddEditReminderViewModelSchedulingTest {
+    private val reminderRepository = mockk<com.kaapstorm.remindmeagain.data.repository.ReminderRepository>(relaxed = true)
+    private val reminderScheduler = mockk<ReminderScheduler>(relaxed = true)
+    private val nextOccurrenceCalculator = mockk<com.kaapstorm.remindmeagain.domain.service.NextOccurrenceCalculator>(relaxed = true)
+
+    private val testDispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `scheduling after insert uses correct next due time`() = runBlocking {
+        val reminder = Reminder(
+            id = 0L,
+            name = "Test",
+            time = LocalTime.of(10, 0),
+            schedule = ReminderSchedule.Daily
+        )
+        coEvery { reminderRepository.insertReminder(any()) } returns 42L
+        every { nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(any(), any()) } returns 123456789L
+
+        val viewModel = AddEditReminderViewModel(
+            reminderId = null,
+            reminderRepository = reminderRepository,
+            reminderScheduler = reminderScheduler,
+            nextOccurrenceCalculator = nextOccurrenceCalculator
+        )
+
+        viewModel.handleIntent(com.kaapstorm.remindmeagain.ui.screens.addeditreminder.AddEditReminderIntent.UpdateName("Test"))
+        viewModel.handleIntent(com.kaapstorm.remindmeagain.ui.screens.addeditreminder.AddEditReminderIntent.SaveReminder)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { reminderScheduler.scheduleReminder(match { it.id == 42L }, 123456789L) }
+    }
+
+    @Test
+    fun `scheduling after update uses correct next due time`() = runBlocking {
+        val reminder = Reminder(
+            id = 99L,
+            name = "Test",
+            time = LocalTime.of(10, 0),
+            schedule = ReminderSchedule.Daily
+        )
+        coEvery { reminderRepository.updateReminder(any()) } returns Unit
+        every { nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(any(), any()) } returns 987654321L
+
+        val viewModel = AddEditReminderViewModel(
+            reminderId = 99L,
+            reminderRepository = reminderRepository,
+            reminderScheduler = reminderScheduler,
+            nextOccurrenceCalculator = nextOccurrenceCalculator
+        )
+
+        viewModel.handleIntent(com.kaapstorm.remindmeagain.ui.screens.addeditreminder.AddEditReminderIntent.UpdateName("Test"))
+        viewModel.handleIntent(com.kaapstorm.remindmeagain.ui.screens.addeditreminder.AddEditReminderIntent.SaveReminder)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { reminderScheduler.scheduleReminder(match { it.id == 99L }, 987654321L) }
     }
 } 

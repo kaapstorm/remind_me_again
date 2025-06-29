@@ -5,6 +5,7 @@ import com.kaapstorm.remindmeagain.data.model.ReminderSchedule
 import com.kaapstorm.remindmeagain.data.model.DismissAction
 import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
 import com.kaapstorm.remindmeagain.domain.service.ReminderSchedulingService
+import com.kaapstorm.remindmeagain.notifications.ReminderScheduler
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -31,6 +32,7 @@ class ShowReminderViewModelTest {
     private lateinit var repository: ReminderRepository
     private lateinit var schedulingService: ReminderSchedulingService
     private lateinit var viewModel: ShowReminderViewModel
+    private lateinit var reminderScheduler: ReminderScheduler
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -38,6 +40,7 @@ class ShowReminderViewModelTest {
         Dispatchers.setMain(testDispatcher)
         repository = mockk()
         schedulingService = mockk()
+        reminderScheduler = mockk(relaxed = true)
     }
 
     @After
@@ -54,7 +57,7 @@ class ShowReminderViewModelTest {
         coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
         every { schedulingService.isReminderActive(any(), any()) } returns false
         
-        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler)
         testDispatcher.scheduler.advanceUntilIdle()
         
         // Initially dialog should not be shown
@@ -76,7 +79,7 @@ class ShowReminderViewModelTest {
         coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
         every { schedulingService.isReminderActive(any(), any()) } returns false
         
-        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler)
         testDispatcher.scheduler.advanceUntilIdle()
         
         // Show dialog first
@@ -100,7 +103,7 @@ class ShowReminderViewModelTest {
         coEvery { repository.deleteReminder(reminderId) } returns Unit
         every { schedulingService.isReminderActive(any(), any()) } returns false
         
-        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler)
         testDispatcher.scheduler.advanceUntilIdle()
         
         // Initially not deleted
@@ -112,6 +115,7 @@ class ShowReminderViewModelTest {
         
         // Verify repository method was called
         coVerify { repository.deleteReminder(reminderId) }
+        coVerify { reminderScheduler.cancelReminder(reminderId) }
         
         // Verify state is updated
         assertTrue(viewModel.state.value.isDeleted)
@@ -130,7 +134,7 @@ class ShowReminderViewModelTest {
         coEvery { repository.deleteReminder(reminderId) } throws RuntimeException(errorMessage)
         every { schedulingService.isReminderActive(any(), any()) } returns false
         
-        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler)
         testDispatcher.scheduler.advanceUntilIdle()
         
         // Send DeleteReminder intent
@@ -151,7 +155,7 @@ class ShowReminderViewModelTest {
         coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
         every { schedulingService.isReminderActive(any(), any()) } returns true
 
-        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Verify state is loaded correctly
@@ -172,7 +176,7 @@ class ShowReminderViewModelTest {
         every { schedulingService.isReminderActive(any(), any()) } returns false
 
         // When
-        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler)
         viewModel.handleIntent(ShowReminderIntent.DismissReminder)
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -194,7 +198,7 @@ class ShowReminderViewModelTest {
         every { schedulingService.isReminderActive(any(), any()) } returns false
 
         // When
-        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService)
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler)
         viewModel.handleIntent(ShowReminderIntent.DismissReminder)
         testDispatcher.scheduler.advanceUntilIdle()
 

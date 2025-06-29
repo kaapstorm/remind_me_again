@@ -12,10 +12,15 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
+import com.kaapstorm.remindmeagain.notifications.ReminderScheduler
+import com.kaapstorm.remindmeagain.domain.service.NextOccurrenceCalculator
+import java.time.LocalDateTime
 
 class AddEditReminderViewModel(
     private val reminderId: Long?,
-    private val reminderRepository: ReminderRepository
+    private val reminderRepository: ReminderRepository,
+    private val reminderScheduler: ReminderScheduler,
+    private val nextOccurrenceCalculator: NextOccurrenceCalculator
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddEditReminderState())
@@ -212,11 +217,24 @@ class AddEditReminderViewModel(
                     schedule = schedule
                 )
 
-                if (reminderId == null) {
+                val newId = if (reminderId == null) {
                     reminderRepository.insertReminder(reminder)
                 } else {
                     reminderRepository.updateReminder(reminder)
+                    reminder.id
                 }
+
+                // Schedule the reminder using AlarmManager
+                val now = LocalDateTime.now()
+                val nextDueMillis = nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(
+                    reminder.copy(id = if (reminderId == null) newId else reminder.id),
+                    now
+                )
+                reminderScheduler.cancelReminder(if (reminderId == null) newId else reminder.id)
+                reminderScheduler.scheduleReminder(
+                    reminder.copy(id = if (reminderId == null) newId else reminder.id),
+                    nextDueMillis
+                )
 
                 _state.value = _state.value.copy(
                     isSaving = false,
