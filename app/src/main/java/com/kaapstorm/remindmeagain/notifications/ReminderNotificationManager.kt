@@ -46,7 +46,7 @@ class ReminderNotificationManager(
         val contentIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // Or specific flags
             putExtra(EXTRA_REMINDER_ID, reminder.id)
-            // Add other extras if MainActivity needs to navigate to a specific reminder
+            putExtra(EXTRA_SHOW_REMINDER, true) // Navigate to Show Reminder Screen
         }
         val contentPendingIntentFlags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         val contentPendingIntent = PendingIntent.getActivity(context, notificationId, contentIntent, contentPendingIntentFlags)
