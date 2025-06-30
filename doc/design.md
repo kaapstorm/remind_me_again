@@ -86,12 +86,10 @@ state, then when the app restarts (or the next scheduled check happens), it
 should re-notify immediately if the original due time + last snooze delay has
 passed.
 
-The app does not need to be resilient to reboots. In-memory storage is
-sufficient for managing notification intervals.
+The app does not need to be resilient to reboots.
 
-WorkManager has a minimum interval of 15 minutes, so when a notification is
-snoozed, the app should use `AlarmManager`, with `setExact` to respect
-battery-saving measures.
+When a notification is snoozed, the app should use `AlarmManager`, with
+`setExact` to respect battery-saving measures.
 
 
 Technical Design Decisions
