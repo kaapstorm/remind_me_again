@@ -7,18 +7,22 @@ import com.kaapstorm.remindmeagain.data.model.PostponeAction
 import com.kaapstorm.remindmeagain.data.model.Reminder
 import com.kaapstorm.remindmeagain.data.model.DismissAction
 import com.kaapstorm.remindmeagain.domain.service.ReminderSchedulingService
+import com.kaapstorm.remindmeagain.domain.service.NextOccurrenceCalculator
 import com.kaapstorm.remindmeagain.notifications.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 class ShowReminderViewModel(
     private val reminderId: Long,
     private val reminderRepository: ReminderRepository,
     private val schedulingService: ReminderSchedulingService,
-    private val reminderScheduler: ReminderScheduler
+    private val reminderScheduler: ReminderScheduler,
+    private val nextOccurrenceCalculator: NextOccurrenceCalculator
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ShowReminderState())
@@ -48,19 +52,29 @@ class ShowReminderViewModel(
                 reminderRepository.getReminderById(reminderId).collect { reminder ->
                     if (reminder != null) {
                         reminderRepository.getDismissActionsForReminder(reminderId).collect { actions ->
-                            val lastAction = actions.maxByOrNull { it.timestamp }
+                            val lastDismissAction = actions.maxByOrNull { it.timestamp }
                             
                             // Calculate if reminder is due using the scheduling service
+                            val currentTime = Instant.now().atZone(ZoneId.systemDefault()).toLocalDateTime()
                             val isDue = schedulingService.isReminderActive(
                                 reminder = reminder,
-                                dateTime = Instant.now().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
+                                dateTime = currentTime
                             )
+                            
+                            // Calculate next due time
+                            val nextDueTimestamp = nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
+                            val nextDueTime = if (nextDueTimestamp != Long.MAX_VALUE) {
+                                Instant.ofEpochMilli(nextDueTimestamp).atZone(ZoneId.systemDefault()).toLocalDateTime()
+                            } else {
+                                null
+                            }
                             
                             _state.value = _state.value.copy(
                                 isLoading = false,
                                 reminder = reminder,
-                                lastAction = lastAction,
-                                isDue = isDue
+                                lastDismissAction = lastDismissAction,
+                                isDue = isDue,
+                                nextDueTime = nextDueTime
                             )
                         }
                     } else {
@@ -167,8 +181,9 @@ class ShowReminderViewModel(
 data class ShowReminderState(
     val isLoading: Boolean = false,
     val reminder: Reminder? = null,
-    val lastAction: DismissAction? = null,
+    val lastDismissAction: DismissAction? = null,
     val isDue: Boolean = false,
+    val nextDueTime: LocalDateTime? = null,
     val selectedPostponeInterval: Int = 300, // 5 minutes default
     val isProcessing: Boolean = false,
     val isDismissed: Boolean = false,

@@ -27,7 +27,8 @@
     
     <!-- Show Reminder Screen -->
     <string name="reminder_details">Reminder Details</string>
-    <string name="last_completed">Last completed: %s</string>
+    <string name="last_dismissed">Last dismissed: %s</string>
+    <string name="next_due">Next due: %s</string>
     <string name="reminder_is_due">Reminder is due!</string>
     <string name="dismiss">Dismiss</string>
     <string name="postpone">Postpone</string>

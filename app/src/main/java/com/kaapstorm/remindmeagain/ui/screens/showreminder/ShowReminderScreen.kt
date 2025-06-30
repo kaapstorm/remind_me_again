@@ -43,7 +43,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kaapstorm.remindmeagain.R
-import com.kaapstorm.remindmeagain.data.model.DismissAction
 import com.kaapstorm.remindmeagain.ui.components.ReminderScheduleText
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -214,14 +213,27 @@ private fun ReminderDetailsContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
-                // Last completed info
-                state.lastAction?.let { action ->
+                // Last dismissed info
+                state.lastDismissAction?.let { action ->
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(
-                            R.string.last_completed,
+                            R.string.last_dismissed,
                             action.timestamp.atZone(java.time.ZoneId.systemDefault())
-                                .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Next due info
+                state.nextDueTime?.let { nextDueTime ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.next_due,
+                            nextDueTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

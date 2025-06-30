@@ -198,8 +198,8 @@ App Navigation & Screen Flow
    | Reminder Details                     |
    |--------------------------------------|
    | Name: Morning Meds                   |
-   | Last done: 2025-06-28 07:45          |
-   | Next due: 07:30                      |
+   | Last dismissed: 2025-06-28 07:45     |
+   | Next due: 2025-06-29 07:30           |
    |                                      |
    | [ Reminder is due! ]                 |
    | [ Dismiss ]   [ Postpone > ]         |  <-- Buttons
