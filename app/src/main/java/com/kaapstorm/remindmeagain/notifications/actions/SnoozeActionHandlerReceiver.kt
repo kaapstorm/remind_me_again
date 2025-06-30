@@ -10,6 +10,7 @@ import android.content.Intent
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.kaapstorm.remindmeagain.notifications.SnoozeStateManager
+import com.kaapstorm.remindmeagain.notifications.ReminderScheduler
 import com.kaapstorm.remindmeagain.permissions.ExactAlarmPermissionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +23,7 @@ class SnoozeActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
 
     private val snoozeStateManager: SnoozeStateManager by inject()
     private val exactAlarmPermissionManager: ExactAlarmPermissionManager by inject()
+    private val reminderScheduler: ReminderScheduler by inject()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     @RequiresPermission(Manifest.permission.SCHEDULE_EXACT_ALARM)
@@ -40,6 +42,10 @@ class SnoozeActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
         scope.launch {
             snoozeStateManager.setSnoozeAlarmInterval(reminderId, intervalToScheduleNow)
         }
+
+        // Cancel any pending repeat alarms for this reminder
+        reminderScheduler.cancelRepeat(reminderId)
+        Log.d("SnoozeActionHandler", "Cancelled repeat alarms for reminder $reminderId")
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val showSnoozedIntent = Intent(context, ShowSnoozedNotificationReceiver::class.java).apply {

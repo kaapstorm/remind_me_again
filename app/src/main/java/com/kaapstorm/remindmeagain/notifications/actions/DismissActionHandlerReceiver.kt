@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.kaapstorm.remindmeagain.notifications.SnoozeStateManager
+import com.kaapstorm.remindmeagain.notifications.ReminderScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,6 +17,7 @@ import org.koin.core.component.inject
 class DismissActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
 
     private val snoozeStateManager: SnoozeStateManager by inject()
+    private val reminderScheduler: ReminderScheduler by inject()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -30,6 +32,10 @@ class DismissActionHandlerReceiver : BroadcastReceiver(), KoinComponent {
         scope.launch {
             snoozeStateManager.clearSnoozeState(reminderId)
         }
+
+        // Cancel any pending repeat alarms for this reminder
+        reminderScheduler.cancelRepeat(reminderId)
+        Log.d("DismissActionHandler", "Cancelled repeat alarms for reminder $reminderId")
 
         // Dismiss the current notification
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

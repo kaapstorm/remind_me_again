@@ -24,19 +24,20 @@ class ReminderAlarmReceiver : BroadcastReceiver(), KoinComponent {
     private val snoozeStateManager: SnoozeStateManager by inject()
     private val nextOccurrenceCalculator: NextOccurrenceCalculator by inject()
     private val reminderScheduler: ReminderScheduler by inject()
+    private val repeatSchedulingHelper: RepeatSchedulingHelper by inject()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onReceive(context: Context, intent: Intent) {
         val reminderId = intent.getLongExtra(EXTRA_REMINDER_ID, -1L)
         val isRepeat = intent.getBooleanExtra(EXTRA_IS_REPEAT, false)
-        val repeatIntervalSeconds = intent.getIntExtra(EXTRA_REPEAT_INTERVAL_SECONDS, 60)
+        val repeatIntervalSeconds = intent.getIntExtra(EXTRA_REPEAT_INTERVAL_SECONDS, SnoozeStateManager.DEFAULT_INITIAL_SNOOZE_SECONDS)
 
         if (reminderId == -1L) {
             Log.e("ReminderAlarmReceiver", "Invalid reminderId received")
             return
         }
 
-        Log.d("ReminderAlarmReceiver", "Alarm received for reminder $reminderId (isRepeat=$isRepeat)")
+        Log.d("ReminderAlarmReceiver", "Alarm received for reminder $reminderId (isRepeat=$isRepeat, interval=$repeatIntervalSeconds)")
 
         scope.launch {
             val reminder = reminderRepository.getReminderByIdSuspend(reminderId)
@@ -54,25 +55,18 @@ class ReminderAlarmReceiver : BroadcastReceiver(), KoinComponent {
                 isSnoozedNotification = isRepeat
             )
 
-            // Repeat/snooze logic
-            if (isRepeat) {
-                // 1. Get the completed snooze interval
-                val completedInterval = snoozeStateManager.getCompletedSnoozeInterval(reminderId)
-                // 2. Get the next main due timestamp
-                val now = Instant.now().atZone(ZoneId.systemDefault()).toLocalDateTime()
-                val nextMainDueTimestamp = nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(reminder, now)
-                // 3. Calculate next snooze interval and whether to show 'Later'
-                val (nextInterval, shouldShowLater) = snoozeStateManager.calculateNextSnoozeIntervalForButton(
-                    completedInterval,
-                    nextMainDueTimestamp,
-                    System.currentTimeMillis()
-                )
-                // 4. If should show 'Later', schedule next repeat
-                if (shouldShowLater) {
-                    reminderScheduler.scheduleRepeat(reminderId, nextInterval)
-                } else {
-                    Log.d("ReminderAlarmReceiver", "No further repeats scheduled for reminder $reminderId (cutoff reached)")
-                }
+            // Determine if we should schedule the next repeat
+            val decision = repeatSchedulingHelper.shouldScheduleRepeat(
+                reminder = reminder,
+                isRepeat = isRepeat,
+                currentIntervalSeconds = repeatIntervalSeconds
+            )
+
+            if (decision.shouldSchedule) {
+                reminderScheduler.scheduleRepeat(reminderId, decision.intervalSeconds)
+                Log.d("ReminderAlarmReceiver", "Scheduled repeat for reminder $reminderId in ${decision.intervalSeconds} seconds: ${decision.reason}")
+            } else {
+                Log.d("ReminderAlarmReceiver", "No repeat scheduled for reminder $reminderId: ${decision.reason}")
             }
         }
     }
