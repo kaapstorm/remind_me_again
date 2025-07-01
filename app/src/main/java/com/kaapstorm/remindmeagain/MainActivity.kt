@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.rememberNavController
 import com.kaapstorm.remindmeagain.notifications.ReminderNotificationManager
 import com.kaapstorm.remindmeagain.permissions.ExactAlarmPermissionManager
@@ -36,16 +37,18 @@ class MainActivity : ComponentActivity() {
                     }
                 )
 
-                // Handle notification navigation
-                val reminderId = intent.getLongExtra(ReminderNotificationManager.EXTRA_REMINDER_ID, -1L)
-                val showReminder = intent.getBooleanExtra(ReminderNotificationManager.EXTRA_SHOW_REMINDER, false)
-
-                if (showReminder && reminderId != -1L) {
-                    // Navigate to ShowReminderScreen immediately
-                    navController.navigate(Screen.ShowReminder.createRoute(reminderId))
-                }
-
                 AppNavigation(navController)
+
+                // Handle notification navigation after navigation graph is set up
+                LaunchedEffect(Unit) {
+                    val reminderId = intent.getLongExtra(ReminderNotificationManager.EXTRA_REMINDER_ID, -1L)
+                    val showReminder = intent.getBooleanExtra(ReminderNotificationManager.EXTRA_SHOW_REMINDER, false)
+
+                    if (showReminder && reminderId != -1L) {
+                        // Navigate to ShowReminderScreen after composition is complete
+                        navController.navigate(Screen.ShowReminder.createRoute(reminderId))
+                    }
+                }
             }
         }
     }
