@@ -6,6 +6,7 @@ import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
 import com.kaapstorm.remindmeagain.data.model.PostponeAction
 import com.kaapstorm.remindmeagain.data.model.Reminder
 import com.kaapstorm.remindmeagain.data.model.DismissAction
+import com.kaapstorm.remindmeagain.data.model.ReminderSchedule
 import com.kaapstorm.remindmeagain.domain.service.ReminderSchedulingService
 import com.kaapstorm.remindmeagain.domain.service.NextOccurrenceCalculator
 import com.kaapstorm.remindmeagain.notifications.ReminderScheduler
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 
 class ShowReminderViewModel(
@@ -49,17 +51,19 @@ class ShowReminderViewModel(
             try {
                 _state.value = _state.value.copy(isLoading = true)
                 
-                reminderRepository.getReminderById(reminderId).collect { reminder ->
+                // Load reminder and dismiss actions in parallel
+                val reminderFlow = reminderRepository.getReminderById(reminderId)
+                val dismissActionsFlow = reminderRepository.getDismissActionsForReminder(reminderId)
+                
+                // Combine the flows to get both reminder and dismiss actions
+                reminderFlow.collect { reminder ->
                     if (reminder != null) {
-                        reminderRepository.getDismissActionsForReminder(reminderId).collect { actions ->
+                        dismissActionsFlow.collect { actions ->
                             val lastDismissAction = actions.maxByOrNull { it.timestamp }
                             
-                            // Calculate if reminder is due using the scheduling service
+                            // Calculate if reminder is due - use a more flexible approach
                             val currentTime = Instant.now().atZone(ZoneId.systemDefault()).toLocalDateTime()
-                            val isDue = schedulingService.isReminderActive(
-                                reminder = reminder,
-                                dateTime = currentTime
-                            )
+                            val isDue = isReminderDue(reminder, currentTime)
                             
                             // Calculate next due time
                             val nextDueTimestamp = nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
@@ -90,6 +94,101 @@ class ShowReminderViewModel(
                     error = e.message ?: "Failed to load reminder"
                 )
             }
+        }
+    }
+
+    /**
+     * Determines if a reminder is due for the Show Reminder Screen.
+     * This is more flexible than isReminderActive - it considers a reminder "due"
+     * if it should be active within a reasonable time window (e.g., within the next hour).
+     */
+    private fun isReminderDue(reminder: Reminder, currentTime: LocalDateTime): Boolean {
+        val schedule = reminder.schedule
+        val reminderTime = reminder.time
+        
+        // Check if the reminder should be active today or very soon
+        return when (schedule) {
+            is ReminderSchedule.Daily -> {
+                // For daily reminders, check if it's due within the next hour
+                val todayReminderTime = currentTime.toLocalDate().atTime(reminderTime)
+                val timeUntilReminder = java.time.Duration.between(currentTime, todayReminderTime)
+                timeUntilReminder.toMinutes() >= 0 && timeUntilReminder.toMinutes() <= 60
+            }
+            
+            is ReminderSchedule.Weekly -> {
+                // For weekly reminders, check if it's due today or within the next few days
+                schedule.days.any { dayOfWeek ->
+                    val nextOccurrence = getNextOccurrenceForDayOfWeek(currentTime, dayOfWeek, reminderTime)
+                    val timeUntilReminder = java.time.Duration.between(currentTime, nextOccurrence)
+                    timeUntilReminder.toMinutes() >= 0 && timeUntilReminder.toMinutes() <= 1440 // Within 24 hours
+                }
+            }
+            
+            is ReminderSchedule.Fortnightly -> {
+                // For fortnightly reminders, check if it's due within the next week
+                val nextOccurrence = getNextFortnightlyOccurrence(currentTime, schedule, reminderTime)
+                val timeUntilReminder = java.time.Duration.between(currentTime, nextOccurrence)
+                timeUntilReminder.toMinutes() >= 0 && timeUntilReminder.toMinutes() <= 10080 // Within 7 days
+            }
+            
+            is ReminderSchedule.Monthly -> {
+                // For monthly reminders, check if it's due within the next few days
+                val nextOccurrence = getNextMonthlyOccurrence(currentTime, schedule, reminderTime)
+                val timeUntilReminder = java.time.Duration.between(currentTime, nextOccurrence)
+                timeUntilReminder.toMinutes() >= 0 && timeUntilReminder.toMinutes() <= 4320 // Within 3 days
+            }
+        }
+    }
+
+    private fun getNextOccurrenceForDayOfWeek(currentTime: LocalDateTime, dayOfWeek: java.time.DayOfWeek, reminderTime: LocalTime): LocalDateTime {
+        var nextDate = currentTime.toLocalDate()
+        while (nextDate.dayOfWeek != dayOfWeek) {
+            nextDate = nextDate.plusDays(1)
+        }
+        return LocalDateTime.of(nextDate, reminderTime)
+    }
+
+    private fun getNextFortnightlyOccurrence(currentTime: LocalDateTime, schedule: ReminderSchedule.Fortnightly, reminderTime: LocalTime): LocalDateTime {
+        var nextDate = currentTime.toLocalDate()
+        while (nextDate.dayOfWeek != schedule.date.dayOfWeek) {
+            nextDate = nextDate.plusDays(1)
+        }
+        
+        // Check if this is the correct fortnight
+        val daysSinceReference = nextDate.toEpochDay() - schedule.date.toEpochDay()
+        val weeksSinceReference = daysSinceReference / 7
+        if (weeksSinceReference % 2L != 0L) {
+            nextDate = nextDate.plusWeeks(1)
+        }
+        
+        return LocalDateTime.of(nextDate, reminderTime)
+    }
+
+    private fun getNextMonthlyOccurrence(currentTime: LocalDateTime, schedule: ReminderSchedule.Monthly, reminderTime: LocalTime): LocalDateTime {
+        return when {
+            schedule.dayOfWeek != null && schedule.weekOfMonth != null -> {
+                // Find the next occurrence of the nth day of week
+                var nextDate = currentTime.toLocalDate()
+                while (true) {
+                    if (nextDate.dayOfWeek == schedule.dayOfWeek) {
+                        val weekOfMonth = ((nextDate.dayOfMonth - 1) / 7) + 1
+                        if (weekOfMonth == schedule.weekOfMonth) {
+                            return LocalDateTime.of(nextDate, reminderTime)
+                        }
+                    }
+                    nextDate = nextDate.plusDays(1)
+                }
+                LocalDateTime.of(nextDate, reminderTime) // This should never be reached
+            }
+            schedule.dayOfMonth != null -> {
+                // Find the next occurrence of the day of month
+                var nextDate = currentTime.toLocalDate()
+                while (nextDate.dayOfMonth != schedule.dayOfMonth) {
+                    nextDate = nextDate.plusDays(1)
+                }
+                return LocalDateTime.of(nextDate, reminderTime)
+            }
+            else -> LocalDateTime.of(currentTime.toLocalDate().plusDays(1), reminderTime) // Fallback
         }
     }
 

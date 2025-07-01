@@ -157,7 +157,9 @@ class ShowReminderViewModelTest {
     @Test
     fun `loading reminder works correctly`() = runTest {
         val reminderId = 1L
-        val reminder = Reminder(id = reminderId, name = "Test Reminder", time = LocalTime.of(10, 0), schedule = ReminderSchedule.Daily)
+        val now = java.time.LocalDateTime.now()
+        val reminderTime = now.toLocalTime().plusMinutes(30) // within the next hour
+        val reminder = Reminder(id = reminderId, name = "Test Reminder", time = reminderTime, schedule = ReminderSchedule.Daily)
         coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
         coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
         every { schedulingService.isReminderActive(any(), any()) } returns true
@@ -171,6 +173,24 @@ class ShowReminderViewModelTest {
         assertTrue(viewModel.state.value.isDue)
         assertFalse(viewModel.state.value.isLoading)
         assertEquals(null, viewModel.state.value.lastDismissAction)
+    }
+
+    @Test
+    fun `last dismissed info is shown when DismissAction exists`() = runTest {
+        val reminderId = 2L
+        val now = java.time.LocalDateTime.now()
+        val reminderTime = now.toLocalTime().plusMinutes(30)
+        val reminder = Reminder(id = reminderId, name = "Test Reminder 2", time = reminderTime, schedule = ReminderSchedule.Daily)
+        val dismissAction = DismissAction(reminderId = reminderId, timestamp = java.time.Instant.now())
+        coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(listOf(dismissAction))
+        every { schedulingService.isReminderActive(any(), any()) } returns true
+        every { nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(any(), any()) } returns 123456789L
+
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler, nextOccurrenceCalculator)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(dismissAction, viewModel.state.value.lastDismissAction)
     }
 
     @Test
