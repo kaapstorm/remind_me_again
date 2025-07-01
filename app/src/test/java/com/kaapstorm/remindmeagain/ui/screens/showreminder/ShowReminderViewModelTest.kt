@@ -26,6 +26,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
 import java.time.Instant
 import java.time.LocalTime
+import java.time.Clock
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ShowReminderViewModelTest {
@@ -36,6 +38,10 @@ class ShowReminderViewModelTest {
     private lateinit var reminderScheduler: ReminderScheduler
     private lateinit var nextOccurrenceCalculator: NextOccurrenceCalculator
     private val testDispatcher = StandardTestDispatcher()
+    
+    // Fixed time for deterministic tests
+    private val fixedInstant = Instant.parse("2023-03-15T12:00:00Z")
+    private val fixedClock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
 
     @Before
     fun setup() {
@@ -192,6 +198,80 @@ class ShowReminderViewModelTest {
 
         assertEquals(dismissAction, viewModel.state.value.lastDismissAction)
     }
+
+    @Test
+    fun `reminder is not due if dismissed within time window`() = runTest {
+        val reminderId = 3L
+        val now = fixedInstant.atZone(ZoneOffset.UTC).toLocalDateTime()
+        val reminderTime = now.toLocalTime().plusMinutes(30) // Due in 30 minutes
+        val reminder = Reminder(id = reminderId, name = "Test Reminder 3", time = reminderTime, schedule = ReminderSchedule.Daily)
+        
+        // Dismiss action from 5 minutes ago (within the 1-hour window before due time)
+        val dismissAction = DismissAction(
+            reminderId = reminderId, 
+            timestamp = fixedInstant.minusSeconds(300) // 5 minutes ago
+        )
+        
+        coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(listOf(dismissAction))
+        every { schedulingService.isReminderActive(any(), any()) } returns true
+        every { nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(any(), any()) } returns 123456789L
+
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler, nextOccurrenceCalculator, fixedClock)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Should show last dismiss action but not be due
+        assertEquals(dismissAction, viewModel.state.value.lastDismissAction)
+        // The reminder should not be due because it was dismissed within the hour before it's due
+        assertFalse("Reminder should not be due when dismissed within time window", viewModel.state.value.isDue)
+    }
+
+    @Test
+    fun `reminder with no dismiss action is due when scheduled`() = runTest {
+        val reminderId = 6L
+        val now = fixedInstant.atZone(ZoneOffset.UTC).toLocalDateTime()
+        val reminderTime = now.toLocalTime().plusMinutes(30) // Due in 30 minutes
+        val reminder = Reminder(id = reminderId, name = "Test Reminder 6", time = reminderTime, schedule = ReminderSchedule.Daily)
+        
+        coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(emptyList())
+        every { schedulingService.isReminderActive(any(), any()) } returns true
+        every { nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(any(), any()) } returns 123456789L
+
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler, nextOccurrenceCalculator, fixedClock)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Should be due when no dismiss action exists
+        assertTrue("Reminder should be due when no dismiss action exists", viewModel.state.value.isDue)
+    }
+
+    @Test
+    fun `reminder is due if dismissed outside time window`() = runTest {
+        val reminderId = 4L
+        val now = fixedInstant.atZone(ZoneOffset.UTC).toLocalDateTime()
+        val reminderTime = now.toLocalTime().plusMinutes(30) // Due in 30 minutes
+        val reminder = Reminder(id = reminderId, name = "Test Reminder 4", time = reminderTime, schedule = ReminderSchedule.Daily)
+        
+        // Dismiss action from 2 hours ago (outside the 1-hour window before due time)
+        val dismissAction = DismissAction(
+            reminderId = reminderId, 
+            timestamp = fixedInstant.minusSeconds(7200) // 2 hours ago
+        )
+        
+        coEvery { repository.getReminderById(reminderId) } returns flowOf(reminder)
+        coEvery { repository.getDismissActionsForReminder(reminderId) } returns flowOf(listOf(dismissAction))
+        every { schedulingService.isReminderActive(any(), any()) } returns true
+        every { nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(any(), any()) } returns 123456789L
+
+        viewModel = ShowReminderViewModel(reminderId, repository, schedulingService, reminderScheduler, nextOccurrenceCalculator, fixedClock)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Should show last dismiss action and still be due
+        assertEquals(dismissAction, viewModel.state.value.lastDismissAction)
+        assertTrue("Reminder should be due when dismissed outside time window", viewModel.state.value.isDue)
+    }
+
+
 
     @Test
     fun `should dismiss reminder successfully`() = runTest {

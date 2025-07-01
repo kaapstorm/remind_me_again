@@ -6,6 +6,7 @@ import com.kaapstorm.remindmeagain.data.db.ReminderActionDao
 import com.kaapstorm.remindmeagain.data.repository.ReminderRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
+import java.time.Clock
 
 val dataModule = module {
     // Database
@@ -17,6 +18,9 @@ val dataModule = module {
     
     // Repository
     single { ReminderRepository(get(), get()) }
+    
+    // System dependencies
+    single { Clock.systemDefaultZone() }
 }
 
 // Include domain module

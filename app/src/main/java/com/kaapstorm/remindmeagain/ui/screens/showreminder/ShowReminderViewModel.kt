@@ -24,7 +24,8 @@ class ShowReminderViewModel(
     private val reminderRepository: ReminderRepository,
     private val schedulingService: ReminderSchedulingService,
     private val reminderScheduler: ReminderScheduler,
-    private val nextOccurrenceCalculator: NextOccurrenceCalculator
+    private val nextOccurrenceCalculator: NextOccurrenceCalculator,
+    private val clock: java.time.Clock = java.time.Clock.systemDefaultZone()
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ShowReminderState())
@@ -62,8 +63,8 @@ class ShowReminderViewModel(
                             val lastDismissAction = actions.maxByOrNull { it.timestamp }
                             
                             // Calculate if reminder is due - use a more flexible approach
-                            val currentTime = Instant.now().atZone(ZoneId.systemDefault()).toLocalDateTime()
-                            val isDue = isReminderDue(reminder, currentTime)
+                            val currentTime = Instant.now(clock).atZone(ZoneId.systemDefault()).toLocalDateTime()
+                            val isDue = isReminderDue(reminder, currentTime, lastDismissAction)
                             
                             // Calculate next due time
                             val nextDueTimestamp = nextOccurrenceCalculator.getNextMainOccurrenceTimestamp(reminder, currentTime)
@@ -101,13 +102,14 @@ class ShowReminderViewModel(
      * Determines if a reminder is due for the Show Reminder Screen.
      * This is more flexible than isReminderActive - it considers a reminder "due"
      * if it should be active within a reasonable time window (e.g., within the next hour).
+     * Also checks if the reminder has been dismissed within that time window.
      */
-    private fun isReminderDue(reminder: Reminder, currentTime: LocalDateTime): Boolean {
+    private fun isReminderDue(reminder: Reminder, currentTime: LocalDateTime, lastDismissAction: DismissAction?): Boolean {
         val schedule = reminder.schedule
         val reminderTime = reminder.time
         
         // Check if the reminder should be active today or very soon
-        return when (schedule) {
+        val isDue = when (schedule) {
             is ReminderSchedule.Daily -> {
                 // For daily reminders, check if it's due within the next hour
                 val todayReminderTime = currentTime.toLocalDate().atTime(reminderTime)
@@ -125,10 +127,10 @@ class ShowReminderViewModel(
             }
             
             is ReminderSchedule.Fortnightly -> {
-                // For fortnightly reminders, check if it's due within the next week
+                // For fortnightly reminders, check if it's due within the next couple of days
                 val nextOccurrence = getNextFortnightlyOccurrence(currentTime, schedule, reminderTime)
                 val timeUntilReminder = java.time.Duration.between(currentTime, nextOccurrence)
-                timeUntilReminder.toMinutes() >= 0 && timeUntilReminder.toMinutes() <= 10080 // Within 7 days
+                timeUntilReminder.toMinutes() >= 0 && timeUntilReminder.toMinutes() <= 2880 // Within 2 days
             }
             
             is ReminderSchedule.Monthly -> {
@@ -136,6 +138,50 @@ class ShowReminderViewModel(
                 val nextOccurrence = getNextMonthlyOccurrence(currentTime, schedule, reminderTime)
                 val timeUntilReminder = java.time.Duration.between(currentTime, nextOccurrence)
                 timeUntilReminder.toMinutes() >= 0 && timeUntilReminder.toMinutes() <= 4320 // Within 3 days
+            }
+        }
+        
+        // If not due based on schedule, return false
+        if (!isDue) return false
+        
+        // Check if the reminder has been dismissed within the time window
+        return !isReminderDismissedWithinTimeWindow(reminder, currentTime, lastDismissAction)
+    }
+    
+    /**
+     * Checks if a reminder has been dismissed within the time window when it would be due.
+     * If dismissed recently, the reminder is no longer considered due.
+     */
+    private fun isReminderDismissedWithinTimeWindow(reminder: Reminder, currentTime: LocalDateTime, lastDismissAction: DismissAction?): Boolean {
+        if (lastDismissAction == null) return false
+        val schedule = reminder.schedule
+        val reminderTime = reminder.time
+        return when (schedule) {
+            is ReminderSchedule.Daily -> {
+                val dueTime = currentTime.toLocalDate().atTime(reminderTime)
+                val windowStart = dueTime.minusMinutes(60)
+                val dismissTime = lastDismissAction.timestamp.atZone(ZoneId.systemDefault()).toLocalDateTime()
+                dismissTime.isAfter(windowStart) && dismissTime.isBefore(dueTime)
+            }
+            is ReminderSchedule.Weekly -> {
+                schedule.days.any { dayOfWeek ->
+                    val dueTime = getNextOccurrenceForDayOfWeek(currentTime, dayOfWeek, reminderTime)
+                    val windowStart = dueTime.minusMinutes(60)
+                    val dismissTime = lastDismissAction.timestamp.atZone(ZoneId.systemDefault()).toLocalDateTime()
+                    dismissTime.isAfter(windowStart) && dismissTime.isBefore(dueTime)
+                }
+            }
+            is ReminderSchedule.Fortnightly -> {
+                val dueTime = getNextFortnightlyOccurrence(currentTime, schedule, reminderTime)
+                val windowStart = dueTime.minusMinutes(60)
+                val dismissTime = lastDismissAction.timestamp.atZone(ZoneId.systemDefault()).toLocalDateTime()
+                dismissTime.isAfter(windowStart) && dismissTime.isBefore(dueTime)
+            }
+            is ReminderSchedule.Monthly -> {
+                val dueTime = getNextMonthlyOccurrence(currentTime, schedule, reminderTime)
+                val windowStart = dueTime.minusMinutes(60)
+                val dismissTime = lastDismissAction.timestamp.atZone(ZoneId.systemDefault()).toLocalDateTime()
+                dismissTime.isAfter(windowStart) && dismissTime.isBefore(dueTime)
             }
         }
     }
@@ -199,7 +245,7 @@ class ShowReminderViewModel(
                 
                 val action = DismissAction(
                     reminderId = reminderId,
-                    timestamp = Instant.now()
+                    timestamp = Instant.now(clock)
                 )
                 
                 reminderRepository.insertDismissAction(action)
@@ -224,7 +270,7 @@ class ShowReminderViewModel(
                 
                 val action = PostponeAction(
                     reminderId = reminderId,
-                    timestamp = Instant.now(),
+                    timestamp = Instant.now(clock),
                     intervalSeconds = intervalSeconds
                 )
                 
